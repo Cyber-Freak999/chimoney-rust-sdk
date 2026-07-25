@@ -1,4 +1,6 @@
 use reqwest_middleware::ClientWithMiddleware;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::error::{ChimoneyError, Result};
 use crate::middleware::{build_client, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_SECS};
@@ -20,6 +22,13 @@ pub struct ChimoneyClient {
     client: ClientWithMiddleware,
     api_key: String,
     base_url: String,
+}
+
+enum Method {
+    Get,
+    Post,
+    Delete,
+    Patch,
 }
 
 impl ChimoneyClient {
@@ -55,90 +64,114 @@ impl ChimoneyClient {
         &self.base_url
     }
 
-    /// Make a GET request.
-    async fn get(&self, path: &str, query: Option<&str>) -> Result<String> {
+    async fn request(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<String>,
+        query: Option<&str>,
+    ) -> Result<String> {
         let mut url = format!("{}{}", self.base_url, path);
         if let Some(params) = query {
             url.push('?');
             url.push_str(params);
         }
 
-        let response = self
-            .client
-            .get(&url)
+        let mut req = match method {
+            Method::Get => self.client.get(&url),
+            Method::Post => self.client.post(&url),
+            Method::Delete => self.client.delete(&url),
+            Method::Patch => self.client.patch(&url),
+        };
+
+        req = req
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
-            .header("X-API-KEY", &self.api_key)
-            .send()
-            .await
-            .map_err(ChimoneyError::MiddlewareError)?;
+            .header("X-API-KEY", &self.api_key);
 
+        if let Some(body) = body {
+            req = req.body(body);
+        }
+
+        let response = req.send().await.map_err(ChimoneyError::MiddlewareError)?;
         self.handle_response(response).await
     }
 
-    /// Make a POST request.
-    async fn post(&self, path: &str, body: &str, query: Option<&str>) -> Result<String> {
-        let mut url = format!("{}{}", self.base_url, path);
-        if let Some(params) = query {
-            url.push('?');
-            url.push_str(params);
-        }
-
-        let response = self
-            .client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .header("X-API-KEY", &self.api_key)
-            .body(body.to_string())
-            .send()
-            .await
-            .map_err(ChimoneyError::MiddlewareError)?;
-
-        self.handle_response(response).await
+    async fn post_json<T: Serialize, R: DeserializeOwned>(
+        &self,
+        path: &str,
+        request: &T,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let body =
+            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        let response = self.request(Method::Post, path, Some(body), query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
     }
 
-    /// Make a DELETE request.
-    async fn delete(&self, path: &str, query: Option<&str>) -> Result<String> {
-        let mut url = format!("{}{}", self.base_url, path);
-        if let Some(params) = query {
-            url.push('?');
-            url.push_str(params);
-        }
-
-        let response = self
-            .client
-            .delete(&url)
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .header("X-API-KEY", &self.api_key)
-            .send()
-            .await
-            .map_err(ChimoneyError::MiddlewareError)?;
-
-        self.handle_response(response).await
+    async fn post_json_data<T: Serialize, R: DeserializeOwned>(
+        &self,
+        path: &str,
+        request: &T,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let body =
+            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        let response = self.request(Method::Post, path, Some(body), query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json["data"].clone())
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
     }
 
-    /// Make a PATCH request.
-    async fn patch(&self, path: &str, body: &str, query: Option<&str>) -> Result<String> {
-        let mut url = format!("{}{}", self.base_url, path);
-        if let Some(params) = query {
-            url.push('?');
-            url.push_str(params);
-        }
+    async fn get_json<R: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let response = self.request(Method::Get, path, None, query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+    }
 
-        let response = self
-            .client
-            .patch(&url)
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .header("X-API-KEY", &self.api_key)
-            .body(body.to_string())
-            .send()
-            .await
-            .map_err(ChimoneyError::MiddlewareError)?;
+    async fn get_json_data<R: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let response = self.request(Method::Get, path, None, query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json["data"].clone())
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+    }
 
-        self.handle_response(response).await
+    async fn delete_json<R: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let response = self.request(Method::Delete, path, None, query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+    }
+
+    async fn patch_json<T: Serialize, R: DeserializeOwned>(
+        &self,
+        path: &str,
+        request: &T,
+        query: Option<&str>,
+    ) -> Result<R> {
+        let body =
+            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        let response = self.request(Method::Patch, path, Some(body), query).await?;
+        let json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
+        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
     }
 
     // ── Account Methods ──────────────────────────────────────────────
@@ -146,25 +179,15 @@ impl ChimoneyClient {
     /// Get transactions by account ID.
     pub async fn get_transactions(&self, account_id: &str) -> Result<Vec<crate::types::Transaction>> {
         let path = "/v0.2.4/accounts/transactions";
-        let body = serde_json::json!({ "subAccount": account_id }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json["data"].clone())
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "subAccount": account_id });
+        self.post_json_data(path, &body, None).await
     }
 
     /// Get single transaction details.
     pub async fn get_transaction(&self, transaction_id: &str) -> Result<crate::types::Transaction> {
         let path = "/v0.2.4/accounts/transaction";
-        let body = serde_json::json!({ "id": transaction_id }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json["data"].clone())
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "id": transaction_id });
+        self.post_json_data(path, &body, None).await
     }
 
     /// Get transaction by issue ID.
@@ -173,23 +196,17 @@ impl ChimoneyClient {
         issue_id: &str,
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/accounts/issue-id-transactions";
-        let body = serde_json::json!({ "issueID": issue_id }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        Ok(json["data"].clone())
+        let body = serde_json::json!({ "issueID": issue_id });
+        self.post_json_data::<_, serde_json::Value>(path, &body, None)
+            .await
     }
 
     /// Get public profile.
     pub async fn get_public_profile(&self) -> Result<serde_json::Value> {
         let path = "/v0.2.4/accounts/public-profile";
-        let body = "{}".to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        Ok(json["data"].clone())
+        let body = serde_json::json!({});
+        self.post_json_data::<_, serde_json::Value>(path, &body, None)
+            .await
     }
 
     /// Transfer between accounts.
@@ -197,14 +214,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::TransferRequest,
     ) -> Result<crate::types::TransferResponse> {
-        let path = "/v0.2.4/accounts/transfer";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/accounts/transfer", request, None)
+            .await
     }
 
     /// Initiate Chimoney transaction.
@@ -212,14 +223,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::InitiateChimoneyRequest,
     ) -> Result<crate::types::InitiateChimoneyResponse> {
-        let path = "/v0.2.4/payouts/initiate-chimoney";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/initiate-chimoney", request, None)
+            .await
     }
 
     /// Delete unpaid transactions.
@@ -229,11 +234,7 @@ impl ChimoneyClient {
     ) -> Result<crate::types::DeleteUnpaidTransactionResponse> {
         let path = "/v0.2.4/accounts/delete-unpaid-transaction";
         let query = format!("chiRef={}", chi_ref);
-        let response = self.delete(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.delete_json(path, Some(&query)).await
     }
 
     /// Issue an Interledger wallet address for a user.
@@ -241,14 +242,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::IssueWalletAddressRequest,
     ) -> Result<crate::types::AccountOperationResponse> {
-        let path = "/v0.2.4/accounts/issue-wallet-address";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/accounts/issue-wallet-address", request, None)
+            .await
     }
 
     /// Claim community membership reward.
@@ -256,14 +251,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::ClaimRewardRequest,
     ) -> Result<crate::types::AccountOperationResponse> {
-        let path = "/v0.2.4/accounts/claim-reward";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/accounts/claim-reward", request, None)
+            .await
     }
 
     // ── Payment Methods ─────────────────────────────────────────────
@@ -273,15 +262,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::PaymentRequest,
     ) -> Result<crate::types::PaymentResponse> {
-        let path = "/v0.2.4/payment/initiate";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payment/initiate", request, None)
+            .await
     }
 
     /// Verify a payment.
@@ -290,13 +272,8 @@ impl ChimoneyClient {
         issue_id: &str,
     ) -> Result<crate::types::PaymentVerification> {
         let path = "/v0.2.4/payment/verify";
-        let body = serde_json::json!({ "issueID": issue_id }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json["data"].clone())
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "issueID": issue_id });
+        self.post_json_data(path, &body, None).await
     }
 
     /// Simulate a payment (sandbox only).
@@ -305,12 +282,9 @@ impl ChimoneyClient {
         issue_id: &str,
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/payment/simulate";
-        let body = serde_json::json!({ "issueID": issue_id }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        Ok(json["data"].clone())
+        let body = serde_json::json!({ "issueID": issue_id });
+        self.post_json_data::<_, serde_json::Value>(path, &body, None)
+            .await
     }
 
     /// Simulate funding via a specified rail (staging only).
@@ -319,13 +293,8 @@ impl ChimoneyClient {
         request: &crate::types::SimulateFundingRequest,
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/payment/simulate-funding";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        Ok(json["data"].clone())
+        self.post_json_data::<_, serde_json::Value>(path, request, None)
+            .await
     }
 
     // ── Payout Methods ─────────────────────────────────────────────
@@ -335,14 +304,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::BankPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/bank";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/bank", request, None).await
     }
 
     /// Payout via airtime.
@@ -350,14 +312,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::AirtimePayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/airtime";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/airtime", request, None)
+            .await
     }
 
     /// Payout via Chimoney.
@@ -365,14 +321,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::ChimoneyPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/chimoney";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/chimoney", request, None)
+            .await
     }
 
     /// Payout via mobile money.
@@ -380,14 +330,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::MobileMoneyPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/mobile-money";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/mobile-money", request, None)
+            .await
     }
 
     /// Payout via gift card.
@@ -395,14 +339,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::GiftCardPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/gift-card";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/gift-card", request, None)
+            .await
     }
 
     /// Payout via Interledger wallet.
@@ -410,14 +348,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::InterledgerPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/interledger-wallet";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/interledger-wallet", request, None)
+            .await
     }
 
     /// Payout via wallet.
@@ -425,14 +357,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::WalletPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/wallet";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/wallet", request, None)
+            .await
     }
 
     /// Check payout status.
@@ -441,12 +367,8 @@ impl ChimoneyClient {
         chi_ref: &str,
     ) -> Result<crate::types::PayoutStatusResponse> {
         let path = "/v0.2.4/payouts/status";
-        let body = serde_json::json!({ "chiRef": chi_ref }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "chiRef": chi_ref });
+        self.post_json(path, &body, None).await
     }
 
     /// Payout via Interac e-Transfer (Canada).
@@ -454,14 +376,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::InteracPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/interac";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/interac", request, None)
+            .await
     }
 
     /// Payout via SPEI (Mexican bank transfer).
@@ -469,14 +385,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::SpeiPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/spei";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/spei", request, None).await
     }
 
     /// Debit wallet to process an unpaid transaction.
@@ -484,14 +393,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::ProcessUnpaidRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/process";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/process", request, None)
+            .await
     }
 
     /// Payout Canadian bill payment.
@@ -499,14 +402,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::BillsCaPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        let path = "/v0.2.4/payouts/bills/ca";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/payouts/bills/ca", request, None)
+            .await
     }
 
     // ── Agent Methods ─────────────────────────────────────────────
@@ -516,24 +413,13 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateAgentRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/create";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/create", request, None)
+            .await
     }
 
     /// List all agents.
     pub async fn list_agents(&self) -> Result<crate::types::AgentListResponse> {
-        let path = "/v0.2.4/agents/list";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json("/v0.2.4/agents/list", None).await
     }
 
     /// Get agent details by ID.
@@ -543,11 +429,7 @@ impl ChimoneyClient {
     ) -> Result<crate::types::AgentResponse> {
         let path = "/v0.2.4/agents/get";
         let query = format!("agentId={}", agent_id);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// Update an agent.
@@ -555,14 +437,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateAgentRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/update";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.patch(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.patch_json("/v0.2.4/agents/update", request, None)
+            .await
     }
 
     /// Update agent policies.
@@ -570,14 +446,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateAgentPoliciesRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/update-policies";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.patch(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.patch_json("/v0.2.4/agents/update-policies", request, None)
+            .await
     }
 
     /// Suspend an agent.
@@ -585,14 +455,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::AgentIdRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/suspend";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/suspend", request, None)
+            .await
     }
 
     /// Reactivate a suspended agent.
@@ -600,14 +464,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::AgentIdRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/reactivate";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/reactivate", request, None)
+            .await
     }
 
     /// Get API key for an agent.
@@ -617,11 +475,7 @@ impl ChimoneyClient {
     ) -> Result<crate::types::AgentApiKeyResponse> {
         let path = "/v0.2.4/agents/api-key";
         let query = format!("agentId={}", agent_id);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// Manage an agent API key (create, rotate, revoke, delete).
@@ -629,14 +483,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::ManageAgentApiKeyRequest,
     ) -> Result<crate::types::AgentApiKeyResponse> {
-        let path = "/v0.2.4/agents/api-key";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/api-key", request, None)
+            .await
     }
 
     /// Get transactions for an agent.
@@ -644,14 +492,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::AgentTransactionsRequest,
     ) -> Result<crate::types::AgentTransactionsResponse> {
-        let path = "/v0.2.4/agents/transactions";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/transactions", request, None)
+            .await
     }
 
     /// Fund an agent wallet.
@@ -659,26 +501,15 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::FundAgentRequest,
     ) -> Result<crate::types::AgentResponse> {
-        let path = "/v0.2.4/agents/fund";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/agents/fund", request, None).await
     }
 
     /// Get agent capabilities, limits, and regions configuration.
     pub async fn get_agent_capabilities_limits(
         &self,
     ) -> Result<crate::types::AgentCapabilitiesLimitsResponse> {
-        let path = "/v0.2.4/agents/capabilities-limits";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json("/v0.2.4/agents/capabilities-limits", None)
+            .await
     }
 
     // ── Beneficiary Methods ─────────────────────────────────────────
@@ -687,12 +518,7 @@ impl ChimoneyClient {
     pub async fn get_beneficiaries(
         &self,
     ) -> Result<crate::types::BeneficiaryListResponse> {
-        let path = "/v0.2.4/beneficiary";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json("/v0.2.4/beneficiary", None).await
     }
 
     /// Create a bank beneficiary.
@@ -700,14 +526,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateBankBeneficiaryRequest,
     ) -> Result<crate::types::BeneficiaryResponse> {
-        let path = "/v0.2.4/beneficiary/bank";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/beneficiary/bank", request, None)
+            .await
     }
 
     /// Preview a transfer to a beneficiary.
@@ -715,14 +535,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::PreviewTransferRequest,
     ) -> Result<crate::types::PreviewTransferResponse> {
-        let path = "/v0.2.4/beneficiary/preview";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/beneficiary/preview", request, None)
+            .await
     }
 
     // ── Redeem Methods ─────────────────────────────────────────────
@@ -732,15 +546,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::RedeemAirtimeRequest,
     ) -> Result<crate::types::RedeemResponse> {
-        let path = "/v0.2.4/redeem/airtime";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/redeem/airtime", request, None)
+            .await
     }
 
     /// Redeem Chimoney.
@@ -748,15 +555,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::RedeemChimoneyRequest,
     ) -> Result<crate::types::RedeemResponse> {
-        let path = "/v0.2.4/redeem/chimoney";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/redeem/chimoney", request, None)
+            .await
     }
 
     /// Redeem gift card.
@@ -764,15 +564,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::RedeemGiftCardRequest,
     ) -> Result<crate::types::RedeemResponse> {
-        let path = "/v0.2.4/redeem/gift-card";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/redeem/gift-card", request, None)
+            .await
     }
 
     /// Redeem mobile money.
@@ -780,15 +573,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::RedeemMobileMoneyRequest,
     ) -> Result<crate::types::RedeemResponse> {
-        let path = "/v0.2.4/redeem/mobile-money";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/redeem/mobile-money", request, None)
+            .await
     }
 
     /// Redeem with custom data.
@@ -796,15 +582,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::RedeemAnyRequest,
     ) -> Result<crate::types::RedeemResponse> {
-        let path = "/v0.2.4/redeem/any";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/redeem/any", request, None).await
     }
 
     // ── SubAccount Methods ─────────────────────────────────────────
@@ -814,15 +592,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateSubAccountRequest,
     ) -> Result<crate::types::SubAccountResponse> {
-        let path = "/v0.2.4/sub-account/create";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/sub-account/create", request, None)
+            .await
     }
 
     /// Update a sub-account.
@@ -830,15 +601,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateSubAccountRequest,
     ) -> Result<crate::types::SubAccountResponse> {
-        let path = "/v0.2.4/sub-account/update";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/sub-account/update", request, None)
+            .await
     }
 
     /// Delete a sub-account.
@@ -848,12 +612,7 @@ impl ChimoneyClient {
     ) -> Result<crate::types::SubAccountResponse> {
         let path = "/v0.2.4/sub-account/delete";
         let query = format!("id={}", sub_account_id);
-        let response = self.delete(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.delete_json(path, Some(&query)).await
     }
 
     /// Get sub-account details.
@@ -863,11 +622,7 @@ impl ChimoneyClient {
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/sub-account/get";
         let query = format!("id={}", sub_account_id);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// List all sub-accounts.
@@ -875,12 +630,7 @@ impl ChimoneyClient {
         &self,
     ) -> Result<Vec<serde_json::Value>> {
         let path = "/v0.2.4/sub-account/list";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json["data"].clone())
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json_data(path, None).await
     }
 
     // ── Community Methods ────────────────────────────────────────────
@@ -890,14 +640,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateCommunityRequest,
     ) -> Result<crate::types::CommunityResponse> {
-        let path = "/v0.2.4/sub-account/community/create";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/sub-account/community/create", request, None)
+            .await
     }
 
     /// Update a community under a sub-account.
@@ -905,14 +649,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateCommunityRequest,
     ) -> Result<crate::types::CommunityResponse> {
-        let path = "/v0.2.4/sub-account/community/update";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/sub-account/community/update", request, None)
+            .await
     }
 
     /// Get community members.
@@ -934,11 +672,7 @@ impl ChimoneyClient {
         if let Some(id) = start_before_id {
             query.push_str(&format!("&startBeforeId={}", id));
         }
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// Get KYC verification page link for a sub-account.
@@ -952,11 +686,7 @@ impl ChimoneyClient {
         if let Some(url) = redirect_url {
             query.push_str(&format!("&redirectUrl={}", url));
         }
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     // ── Wallet Methods ─────────────────────────────────────────────
@@ -967,13 +697,8 @@ impl ChimoneyClient {
         sub_account: &str,
     ) -> Result<crate::types::WalletList> {
         let path = "/v0.2.4/wallets/list";
-        let body = serde_json::json!({ "subAccount": sub_account }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "subAccount": sub_account });
+        self.post_json(path, &body, None).await
     }
 
     /// Lookup a wallet.
@@ -981,15 +706,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::WalletLookupRequest,
     ) -> Result<crate::types::WalletResponse> {
-        let path = "/v0.2.4/wallets/lookup";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/wallets/lookup", request, None)
+            .await
     }
 
     /// Transfer between wallets.
@@ -997,15 +715,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::WalletTransferRequest,
     ) -> Result<crate::types::WalletResponse> {
-        let path = "/v0.2.4/wallets/transfer";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        serde_json::from_value(json)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/wallets/transfer", request, None)
+            .await
     }
 
     // ── Multicurrency Wallet Methods ────────────────────────────────
@@ -1015,14 +726,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateMulticurrencyWalletRequest,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/create";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/multicurrency-wallets/create", request, None)
+            .await
     }
 
     /// Update a multicurrency wallet.
@@ -1030,14 +735,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateMulticurrencyWalletRequest,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/update";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.patch(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.patch_json("/v0.2.4/multicurrency-wallets/update", request, None)
+            .await
     }
 
     /// Get a multicurrency wallet by ID.
@@ -1047,23 +746,15 @@ impl ChimoneyClient {
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
         let path = "/v0.2.4/multicurrency-wallets/get";
         let query = format!("walletId={}", wallet_id);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// List all multicurrency wallets.
     pub async fn list_multicurrency_wallets(
         &self,
     ) -> Result<crate::types::MulticurrencyWalletListResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/list";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json("/v0.2.4/multicurrency-wallets/list", None)
+            .await
     }
 
     /// Get a transfer quote.
@@ -1071,14 +762,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::TransferQuoteRequest,
     ) -> Result<crate::types::TransferQuoteResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/transfer-quote";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/multicurrency-wallets/transfer-quote", request, None)
+            .await
     }
 
     /// Transfer between multicurrency wallets.
@@ -1086,14 +771,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::MulticurrencyTransferRequest,
     ) -> Result<crate::types::MulticurrencyTransferResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/transfer";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/multicurrency-wallets/transfer", request, None)
+            .await
     }
 
     /// Issue a multicurrency wallet.
@@ -1101,14 +780,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::IssueWalletRequest,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/request";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/multicurrency-wallets/request", request, None)
+            .await
     }
 
     /// Issue a bank account.
@@ -1116,69 +789,46 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::IssueBankAccountRequest,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
-        let path = "/v0.2.4/multicurrency-wallets/bank-account";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/multicurrency-wallets/bank-account", request, None)
+            .await
     }
 
     // ── Info Methods ───────────────────────────────────────────────
 
     /// Get airtime countries.
     pub async fn get_airtime_countries(&self) -> Result<serde_json::Value> {
-        let path = "/v0.2.4/info/airtime-countries";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data("/v0.2.4/info/airtime-countries", None)
+            .await
     }
 
     /// Get assets by country code.
     pub async fn get_assets(&self, country_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/assets";
         let query = format!("countryCode={}", country_code);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query))
+            .await
     }
 
     /// Get banks by country code.
     pub async fn get_banks(&self, country_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/country-banks";
         let query = format!("countryCode={}", country_code);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query))
+            .await
     }
 
     /// Get bank branches.
     pub async fn get_bank_branches(&self, bank_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/bank-branches";
         let query = format!("bankCode={}", bank_code);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query))
+            .await
     }
 
     /// Get exchange rates.
     pub async fn get_exchange_rates(&self) -> Result<serde_json::Value> {
-        let path = "/v0.2.4/info/exchange-rates";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data("/v0.2.4/info/exchange-rates", None)
+            .await
     }
 
     /// Convert local currency to USD.
@@ -1189,11 +839,8 @@ impl ChimoneyClient {
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/local-amount-to-usd";
         let query = format!("originCurrency={}&amountInOriginCurrency={}", currency, amount);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query))
+            .await
     }
 
     /// Convert USD to local currency.
@@ -1204,21 +851,14 @@ impl ChimoneyClient {
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/usd-amount-in-local";
         let query = format!("destinationCurrency={}&amountInUSD={}", currency, amount);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data(path, Some(&query))
+            .await
     }
 
     /// Get mobile money codes.
     pub async fn get_mobile_money_codes(&self) -> Result<serde_json::Value> {
-        let path = "/v0.2.4/info/mobile-money-codes";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        self.get_json_data("/v0.2.4/info/mobile-money-codes", None)
+            .await
     }
 
     // ── Info Methods (extended) ─────────────────────────────────────
@@ -1239,10 +879,7 @@ impl ChimoneyClient {
         if let Some(t) = take {
             query.push_str(&format!("&take={}", t));
         }
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// Get beneficiary validation rules for a country.
@@ -1253,21 +890,15 @@ impl ChimoneyClient {
     ) -> Result<crate::types::BeneficiaryRulesResponse> {
         let path = format!("/v0.2.4/info/beneficiary-rules/{}", country_code);
         let query = method.map(|m| format!("method={}", m));
-        let response = self.get(&path, query.as_deref()).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(&path, query.as_deref()).await
     }
 
     /// Get supported identification types.
     pub async fn get_identification_types(
         &self,
     ) -> Result<crate::types::IdentificationTypesResponse> {
-        let path = "/v0.2.4/info/identification-types";
-        let response = self.get(path, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json("/v0.2.4/info/identification-types", None)
+            .await
     }
 
     /// Estimate fees for a transaction.
@@ -1275,13 +906,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::FeeEstimateRequest,
     ) -> Result<crate::types::FeeEstimateResponse> {
-        let path = "/v0.2.4/info/fee-estimate";
-        let body = serde_json::to_string(request)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/info/fee-estimate", request, None)
+            .await
     }
 
     /// Validate a Chimoney voucher code.
@@ -1290,11 +916,8 @@ impl ChimoneyClient {
         code: &str,
     ) -> Result<crate::types::ValidateVoucherResponse> {
         let path = "/v0.2.4/info/communities/verify-code";
-        let body = serde_json::json!({ "code": code }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        let body = serde_json::json!({ "code": code });
+        self.post_json(path, &body, None).await
     }
 
     /// Search Canadian bill merchants/payees.
@@ -1303,11 +926,9 @@ impl ChimoneyClient {
         search: &str,
     ) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/bill-merchants/ca";
-        let body = serde_json::json!({ "search": search }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        Ok(json["data"].clone())
+        let body = serde_json::json!({ "search": search });
+        self.post_json_data::<_, serde_json::Value>(path, &body, None)
+            .await
     }
 
     /// Get states/regions for a country.
@@ -1317,10 +938,7 @@ impl ChimoneyClient {
     ) -> Result<crate::types::CountryStatesResponse> {
         let path = "/v0.2.4/info/country-states-regions";
         let query = format!("countryCode={}", country_code);
-        let response = self.get(path, Some(&query)).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.get_json(path, Some(&query)).await
     }
 
     /// Verify bank account.
@@ -1337,12 +955,9 @@ impl ChimoneyClient {
                 "account_bank": bank_code,
                 "account_number": account_number
             }]
-        }).to_string();
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        
-        Ok(json["data"].clone())
+        });
+        self.post_json_data::<_, serde_json::Value>(path, &body, None)
+            .await
     }
 
     // ── Passport Methods ────────────────────────────────────────────
@@ -1352,14 +967,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::PassportRequest,
     ) -> Result<crate::types::PassportResponse> {
-        let path = "/v0.2.4/passport";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/passport", request, None).await
     }
 
     // ── AI Methods ──────────────────────────────────────────────────
@@ -1369,14 +977,8 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::GenerateInvoiceRequest,
     ) -> Result<crate::types::GenerateInvoiceResponse> {
-        let path = "/v0.2.4/ai/invoice/generate";
-        let body =
-            serde_json::to_string(request).map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-        let response = self.post(path, &body, None).await?;
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
-
-        serde_json::from_value(json).map_err(|e| ChimoneyError::ParseError(e.to_string()))
+        self.post_json("/v0.2.4/ai/invoice/generate", request, None)
+            .await
     }
 
     /// Handle API response.
