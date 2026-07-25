@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0] - 2026-07-26
+
+### Added
+- GitHub Actions CI/CD workflow (test, clippy, fmt, audit, MSRV)
+- `# Errors` doc sections for all public methods
+- `Debug` implementation for `ChimoneyClient` and `ChimoneyClientBuilder`
+
+### Changed
+- Refactored HTTP helpers: 4 methods → 1 unified `request()` method
+- Added generic response parsing helpers (`post_json`, `get_json`, etc.)
+- Upgraded `reqwest` 0.11 → 0.12
+- Upgraded `thiserror` 1 → 2
+- Upgraded `reqwest-retry` 0.2 → 0.6
+
+### Removed
+- Unused `dotenv` dependency
+
 ## [1.0.0] - 2026-07-25
 
 ### Added
