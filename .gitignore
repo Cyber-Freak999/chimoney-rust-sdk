@@ -1,0 +1,22 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Cargo lock (for libraries)
+Cargo.lock
+
+# Environment variables
+.env
+
+# Swap files
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

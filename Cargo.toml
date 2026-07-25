@@ -1,0 +1,31 @@
+[package]
+name = "chimoney_rust_sdk"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.63"
+description = "Rust SDK for the Chimoney API — bulk global payments, payouts, and financial transactions"
+license = "MIT"
+homepage = "https://chimoney.io"
+documentation = "https://docs.rs/chimoney_rust_sdk"
+repository = "https://github.com/Cyber-Freak999/chimoney-rust-sdk"
+readme = "README.md"
+keywords = ["chimoney", "payments", "fintech", "api", "payouts"]
+categories = ["api-bindings", "finance"]
+authors = ["Cyber-Freak999"]
+
+[dependencies]
+dotenv = "0.15"
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest-middleware = "0.2"
+reqwest-retry = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+log = "0.4"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
+[[example]]
+name = "basic_usage"
+path = "examples/basic_usage.rs"
