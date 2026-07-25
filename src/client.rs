@@ -1,3 +1,5 @@
+use std::fmt;
+
 use reqwest_middleware::ClientWithMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -33,11 +35,19 @@ enum Method {
 
 impl ChimoneyClient {
     /// Create a new ChimoneyClient with default settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::ApiKeyEmpty`] if the API key is empty.
     pub fn new(api_key: impl Into<String>) -> Result<Self> {
         Self::builder(api_key).build()
     }
 
     /// Create a new ChimoneyClient with sandbox URL.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::ApiKeyEmpty`] if the API key is empty.
     pub fn new_sandbox(api_key: impl Into<String>) -> Result<Self> {
         Self::builder(api_key)
             .base_url("https://api-v2-sandbox.chimoney.io")
@@ -177,6 +187,14 @@ impl ChimoneyClient {
     // ── Account Methods ──────────────────────────────────────────────
 
     /// Get transactions by account ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_transactions(&self, account_id: &str) -> Result<Vec<crate::types::Transaction>> {
         let path = "/v0.2.4/accounts/transactions";
         let body = serde_json::json!({ "subAccount": account_id });
@@ -184,6 +202,14 @@ impl ChimoneyClient {
     }
 
     /// Get single transaction details.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_transaction(&self, transaction_id: &str) -> Result<crate::types::Transaction> {
         let path = "/v0.2.4/accounts/transaction";
         let body = serde_json::json!({ "id": transaction_id });
@@ -191,6 +217,14 @@ impl ChimoneyClient {
     }
 
     /// Get transaction by issue ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_issue_id_transaction(
         &self,
         issue_id: &str,
@@ -202,6 +236,14 @@ impl ChimoneyClient {
     }
 
     /// Get public profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_public_profile(&self) -> Result<serde_json::Value> {
         let path = "/v0.2.4/accounts/public-profile";
         let body = serde_json::json!({});
@@ -210,6 +252,14 @@ impl ChimoneyClient {
     }
 
     /// Transfer between accounts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn transfer(
         &self,
         request: &crate::types::TransferRequest,
@@ -219,6 +269,14 @@ impl ChimoneyClient {
     }
 
     /// Initiate Chimoney transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn initiate_chimoney(
         &self,
         request: &crate::types::InitiateChimoneyRequest,
@@ -228,6 +286,14 @@ impl ChimoneyClient {
     }
 
     /// Delete unpaid transactions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn delete_unpaid_transactions(
         &self,
         chi_ref: &str,
@@ -238,6 +304,14 @@ impl ChimoneyClient {
     }
 
     /// Issue an Interledger wallet address for a user.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn issue_wallet_address(
         &self,
         request: &crate::types::IssueWalletAddressRequest,
@@ -247,6 +321,14 @@ impl ChimoneyClient {
     }
 
     /// Claim community membership reward.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn claim_reward(
         &self,
         request: &crate::types::ClaimRewardRequest,
@@ -258,6 +340,14 @@ impl ChimoneyClient {
     // ── Payment Methods ─────────────────────────────────────────────
 
     /// Initiate a payment.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn initiate_payment(
         &self,
         request: &crate::types::PaymentRequest,
@@ -267,6 +357,14 @@ impl ChimoneyClient {
     }
 
     /// Verify a payment.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn verify_payment(
         &self,
         issue_id: &str,
@@ -277,6 +375,14 @@ impl ChimoneyClient {
     }
 
     /// Simulate a payment (sandbox only).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn simulate_payment(
         &self,
         issue_id: &str,
@@ -288,6 +394,14 @@ impl ChimoneyClient {
     }
 
     /// Simulate funding via a specified rail (staging only).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn simulate_funding(
         &self,
         request: &crate::types::SimulateFundingRequest,
@@ -300,6 +414,14 @@ impl ChimoneyClient {
     // ── Payout Methods ─────────────────────────────────────────────
 
     /// Payout via bank transfer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_bank(
         &self,
         request: &crate::types::BankPayoutRequest,
@@ -308,6 +430,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via airtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_airtime(
         &self,
         request: &crate::types::AirtimePayoutRequest,
@@ -317,6 +447,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via Chimoney.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_chimoney(
         &self,
         request: &crate::types::ChimoneyPayoutRequest,
@@ -326,6 +464,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via mobile money.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_mobile_money(
         &self,
         request: &crate::types::MobileMoneyPayoutRequest,
@@ -335,6 +481,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via gift card.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_giftcard(
         &self,
         request: &crate::types::GiftCardPayoutRequest,
@@ -344,6 +498,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via Interledger wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_interledger(
         &self,
         request: &crate::types::InterledgerPayoutRequest,
@@ -353,6 +515,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_wallet(
         &self,
         request: &crate::types::WalletPayoutRequest,
@@ -362,6 +532,14 @@ impl ChimoneyClient {
     }
 
     /// Check payout status.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn check_payout_status(
         &self,
         chi_ref: &str,
@@ -372,6 +550,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via Interac e-Transfer (Canada).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_interac(
         &self,
         request: &crate::types::InteracPayoutRequest,
@@ -381,6 +567,14 @@ impl ChimoneyClient {
     }
 
     /// Payout via SPEI (Mexican bank transfer).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_spei(
         &self,
         request: &crate::types::SpeiPayoutRequest,
@@ -389,6 +583,14 @@ impl ChimoneyClient {
     }
 
     /// Debit wallet to process an unpaid transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn process_unpaid(
         &self,
         request: &crate::types::ProcessUnpaidRequest,
@@ -398,6 +600,14 @@ impl ChimoneyClient {
     }
 
     /// Payout Canadian bill payment.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn payout_bills_ca(
         &self,
         request: &crate::types::BillsCaPayoutRequest,
@@ -409,6 +619,14 @@ impl ChimoneyClient {
     // ── Agent Methods ─────────────────────────────────────────────
 
     /// Create a new agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn create_agent(
         &self,
         request: &crate::types::CreateAgentRequest,
@@ -418,11 +636,27 @@ impl ChimoneyClient {
     }
 
     /// List all agents.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn list_agents(&self) -> Result<crate::types::AgentListResponse> {
         self.get_json("/v0.2.4/agents/list", None).await
     }
 
     /// Get agent details by ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_agent(
         &self,
         agent_id: &str,
@@ -433,6 +667,14 @@ impl ChimoneyClient {
     }
 
     /// Update an agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn update_agent(
         &self,
         request: &crate::types::UpdateAgentRequest,
@@ -442,6 +684,14 @@ impl ChimoneyClient {
     }
 
     /// Update agent policies.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn update_agent_policies(
         &self,
         request: &crate::types::UpdateAgentPoliciesRequest,
@@ -451,6 +701,14 @@ impl ChimoneyClient {
     }
 
     /// Suspend an agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn suspend_agent(
         &self,
         request: &crate::types::AgentIdRequest,
@@ -460,6 +718,14 @@ impl ChimoneyClient {
     }
 
     /// Reactivate a suspended agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn reactivate_agent(
         &self,
         request: &crate::types::AgentIdRequest,
@@ -469,6 +735,14 @@ impl ChimoneyClient {
     }
 
     /// Get API key for an agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_agent_api_key(
         &self,
         agent_id: &str,
@@ -479,6 +753,14 @@ impl ChimoneyClient {
     }
 
     /// Manage an agent API key (create, rotate, revoke, delete).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn manage_agent_api_key(
         &self,
         request: &crate::types::ManageAgentApiKeyRequest,
@@ -488,6 +770,14 @@ impl ChimoneyClient {
     }
 
     /// Get transactions for an agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_agent_transactions(
         &self,
         request: &crate::types::AgentTransactionsRequest,
@@ -497,6 +787,14 @@ impl ChimoneyClient {
     }
 
     /// Fund an agent wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn fund_agent(
         &self,
         request: &crate::types::FundAgentRequest,
@@ -505,6 +803,14 @@ impl ChimoneyClient {
     }
 
     /// Get agent capabilities, limits, and regions configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_agent_capabilities_limits(
         &self,
     ) -> Result<crate::types::AgentCapabilitiesLimitsResponse> {
@@ -515,6 +821,14 @@ impl ChimoneyClient {
     // ── Beneficiary Methods ─────────────────────────────────────────
 
     /// Get all beneficiaries.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_beneficiaries(
         &self,
     ) -> Result<crate::types::BeneficiaryListResponse> {
@@ -522,6 +836,14 @@ impl ChimoneyClient {
     }
 
     /// Create a bank beneficiary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn create_bank_beneficiary(
         &self,
         request: &crate::types::CreateBankBeneficiaryRequest,
@@ -531,6 +853,14 @@ impl ChimoneyClient {
     }
 
     /// Preview a transfer to a beneficiary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn preview_transfer(
         &self,
         request: &crate::types::PreviewTransferRequest,
@@ -542,6 +872,14 @@ impl ChimoneyClient {
     // ── Redeem Methods ─────────────────────────────────────────────
 
     /// Redeem airtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn redeem_airtime(
         &self,
         request: &crate::types::RedeemAirtimeRequest,
@@ -551,6 +889,14 @@ impl ChimoneyClient {
     }
 
     /// Redeem Chimoney.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn redeem_chimoney(
         &self,
         request: &crate::types::RedeemChimoneyRequest,
@@ -560,6 +906,14 @@ impl ChimoneyClient {
     }
 
     /// Redeem gift card.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn redeem_giftcard(
         &self,
         request: &crate::types::RedeemGiftCardRequest,
@@ -569,6 +923,14 @@ impl ChimoneyClient {
     }
 
     /// Redeem mobile money.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn redeem_mobile_money(
         &self,
         request: &crate::types::RedeemMobileMoneyRequest,
@@ -578,6 +940,14 @@ impl ChimoneyClient {
     }
 
     /// Redeem with custom data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn redeem_any(
         &self,
         request: &crate::types::RedeemAnyRequest,
@@ -588,6 +958,14 @@ impl ChimoneyClient {
     // ── SubAccount Methods ─────────────────────────────────────────
 
     /// Create a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn create_sub_account(
         &self,
         request: &crate::types::CreateSubAccountRequest,
@@ -597,6 +975,14 @@ impl ChimoneyClient {
     }
 
     /// Update a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn update_sub_account(
         &self,
         request: &crate::types::UpdateSubAccountRequest,
@@ -606,6 +992,14 @@ impl ChimoneyClient {
     }
 
     /// Delete a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn delete_sub_account(
         &self,
         sub_account_id: &str,
@@ -616,6 +1010,14 @@ impl ChimoneyClient {
     }
 
     /// Get sub-account details.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_sub_account(
         &self,
         sub_account_id: &str,
@@ -626,6 +1028,14 @@ impl ChimoneyClient {
     }
 
     /// List all sub-accounts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn list_sub_accounts(
         &self,
     ) -> Result<Vec<serde_json::Value>> {
@@ -636,6 +1046,14 @@ impl ChimoneyClient {
     // ── Community Methods ────────────────────────────────────────────
 
     /// Create a community under a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn create_community(
         &self,
         request: &crate::types::CreateCommunityRequest,
@@ -645,6 +1063,14 @@ impl ChimoneyClient {
     }
 
     /// Update a community under a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn update_community(
         &self,
         request: &crate::types::UpdateCommunityRequest,
@@ -654,6 +1080,14 @@ impl ChimoneyClient {
     }
 
     /// Get community members.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_community_members(
         &self,
         community_id: i64,
@@ -676,6 +1110,14 @@ impl ChimoneyClient {
     }
 
     /// Get KYC verification page link for a sub-account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_kyc_link(
         &self,
         sub_account_id: &str,
@@ -692,6 +1134,14 @@ impl ChimoneyClient {
     // ── Wallet Methods ─────────────────────────────────────────────
 
     /// List wallets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn list_wallets(
         &self,
         sub_account: &str,
@@ -702,6 +1152,14 @@ impl ChimoneyClient {
     }
 
     /// Lookup a wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn lookup_wallet(
         &self,
         request: &crate::types::WalletLookupRequest,
@@ -711,6 +1169,14 @@ impl ChimoneyClient {
     }
 
     /// Transfer between wallets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn transfer_between_wallets(
         &self,
         request: &crate::types::WalletTransferRequest,
@@ -722,6 +1188,14 @@ impl ChimoneyClient {
     // ── Multicurrency Wallet Methods ────────────────────────────────
 
     /// Create a multicurrency wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn create_multicurrency_wallet(
         &self,
         request: &crate::types::CreateMulticurrencyWalletRequest,
@@ -731,6 +1205,14 @@ impl ChimoneyClient {
     }
 
     /// Update a multicurrency wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn update_multicurrency_wallet(
         &self,
         request: &crate::types::UpdateMulticurrencyWalletRequest,
@@ -740,6 +1222,14 @@ impl ChimoneyClient {
     }
 
     /// Get a multicurrency wallet by ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_multicurrency_wallet(
         &self,
         wallet_id: &str,
@@ -750,6 +1240,14 @@ impl ChimoneyClient {
     }
 
     /// List all multicurrency wallets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn list_multicurrency_wallets(
         &self,
     ) -> Result<crate::types::MulticurrencyWalletListResponse> {
@@ -758,6 +1256,14 @@ impl ChimoneyClient {
     }
 
     /// Get a transfer quote.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_transfer_quote(
         &self,
         request: &crate::types::TransferQuoteRequest,
@@ -767,6 +1273,14 @@ impl ChimoneyClient {
     }
 
     /// Transfer between multicurrency wallets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn transfer_multicurrency(
         &self,
         request: &crate::types::MulticurrencyTransferRequest,
@@ -776,6 +1290,14 @@ impl ChimoneyClient {
     }
 
     /// Issue a multicurrency wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn issue_multicurrency_wallet(
         &self,
         request: &crate::types::IssueWalletRequest,
@@ -785,6 +1307,14 @@ impl ChimoneyClient {
     }
 
     /// Issue a bank account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn issue_bank_account(
         &self,
         request: &crate::types::IssueBankAccountRequest,
@@ -796,12 +1326,28 @@ impl ChimoneyClient {
     // ── Info Methods ───────────────────────────────────────────────
 
     /// Get airtime countries.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_airtime_countries(&self) -> Result<serde_json::Value> {
         self.get_json_data("/v0.2.4/info/airtime-countries", None)
             .await
     }
 
     /// Get assets by country code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_assets(&self, country_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/assets";
         let query = format!("countryCode={}", country_code);
@@ -810,6 +1356,14 @@ impl ChimoneyClient {
     }
 
     /// Get banks by country code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_banks(&self, country_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/country-banks";
         let query = format!("countryCode={}", country_code);
@@ -818,6 +1372,14 @@ impl ChimoneyClient {
     }
 
     /// Get bank branches.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_bank_branches(&self, bank_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/bank-branches";
         let query = format!("bankCode={}", bank_code);
@@ -826,12 +1388,28 @@ impl ChimoneyClient {
     }
 
     /// Get exchange rates.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_exchange_rates(&self) -> Result<serde_json::Value> {
         self.get_json_data("/v0.2.4/info/exchange-rates", None)
             .await
     }
 
     /// Convert local currency to USD.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn local_to_usd(
         &self,
         currency: &str,
@@ -844,6 +1422,14 @@ impl ChimoneyClient {
     }
 
     /// Convert USD to local currency.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn usd_to_local(
         &self,
         currency: &str,
@@ -856,6 +1442,14 @@ impl ChimoneyClient {
     }
 
     /// Get mobile money codes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_mobile_money_codes(&self) -> Result<serde_json::Value> {
         self.get_json_data("/v0.2.4/info/mobile-money-codes", None)
             .await
@@ -864,6 +1458,14 @@ impl ChimoneyClient {
     // ── Info Methods (extended) ─────────────────────────────────────
 
     /// Search banks by name in a country.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn search_banks(
         &self,
         country: &str,
@@ -883,6 +1485,14 @@ impl ChimoneyClient {
     }
 
     /// Get beneficiary validation rules for a country.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_beneficiary_rules(
         &self,
         country_code: &str,
@@ -894,6 +1504,14 @@ impl ChimoneyClient {
     }
 
     /// Get supported identification types.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_identification_types(
         &self,
     ) -> Result<crate::types::IdentificationTypesResponse> {
@@ -902,6 +1520,14 @@ impl ChimoneyClient {
     }
 
     /// Estimate fees for a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn estimate_fees(
         &self,
         request: &crate::types::FeeEstimateRequest,
@@ -911,6 +1537,14 @@ impl ChimoneyClient {
     }
 
     /// Validate a Chimoney voucher code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn validate_voucher(
         &self,
         code: &str,
@@ -921,6 +1555,14 @@ impl ChimoneyClient {
     }
 
     /// Search Canadian bill merchants/payees.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn search_merchants(
         &self,
         search: &str,
@@ -932,6 +1574,14 @@ impl ChimoneyClient {
     }
 
     /// Get states/regions for a country.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_country_states(
         &self,
         country_code: &str,
@@ -942,6 +1592,14 @@ impl ChimoneyClient {
     }
 
     /// Verify bank account.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn verify_bank_account(
         &self,
         country_code: &str,
@@ -963,6 +1621,14 @@ impl ChimoneyClient {
     // ── Passport Methods ────────────────────────────────────────────
 
     /// Manage APort passport (check, create, or resend).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn manage_passport(
         &self,
         request: &crate::types::PassportRequest,
@@ -973,6 +1639,14 @@ impl ChimoneyClient {
     // ── AI Methods ──────────────────────────────────────────────────
 
     /// Generate an invoice using AI.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn generate_invoice(
         &self,
         request: &crate::types::GenerateInvoiceRequest,
@@ -1017,6 +1691,15 @@ impl ChimoneyClient {
     }
 }
 
+impl fmt::Debug for ChimoneyClient {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChimoneyClient")
+            .field("base_url", &self.base_url)
+            .field("api_key", &"[REDACTED]")
+            .finish()
+    }
+}
+
 /// Builder for configuring `ChimoneyClient`.
 pub struct ChimoneyClientBuilder {
     api_key: String,
@@ -1045,6 +1728,10 @@ impl ChimoneyClientBuilder {
     }
 
     /// Build the client.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::ApiKeyEmpty`] if the API key is empty.
     pub fn build(self) -> Result<ChimoneyClient> {
         if self.api_key.is_empty() {
             return Err(ChimoneyError::ApiKeyEmpty);
@@ -1057,5 +1744,16 @@ impl ChimoneyClientBuilder {
             api_key: self.api_key,
             base_url: self.base_url,
         })
+    }
+}
+
+impl fmt::Debug for ChimoneyClientBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChimoneyClientBuilder")
+            .field("base_url", &self.base_url)
+            .field("api_key", &"[REDACTED]")
+            .field("max_retries", &self.max_retries)
+            .field("timeout_secs", &self.timeout_secs)
+            .finish()
     }
 }
