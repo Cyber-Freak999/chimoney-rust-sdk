@@ -1,9 +1,6 @@
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{
-    policies::ExponentialBackoff,
-    RetryTransientMiddleware,
-};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 
 use crate::error::{ChimoneyError, Result};
 
@@ -18,8 +15,7 @@ use crate::error::{ChimoneyError, Result};
 ///
 /// A `ClientWithMiddleware` with retry middleware configured.
 pub fn build_client(max_retries: u32, timeout_secs: u64) -> Result<ClientWithMiddleware> {
-    let retry_policy = ExponentialBackoff::builder()
-        .build_with_max_retries(max_retries);
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(max_retries);
 
     let reqwest_client = Client::builder()
         .timeout(std::time::Duration::from_secs(timeout_secs))

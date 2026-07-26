@@ -21,16 +21,11 @@ pub enum ChimoneyError {
 
     /// API returned an error response.
     #[error("API error {status}: {message}")]
-    ApiError {
-        status: u16,
-        message: String,
-    },
+    ApiError { status: u16, message: String },
 
     /// Rate limited by the API.
     #[error("Rate limited, retry after {retry_after} seconds")]
-    RateLimited {
-        retry_after: u64,
-    },
+    RateLimited { retry_after: u64 },
 
     /// Failed to parse response.
     #[error("Failed to parse response: {0}")]

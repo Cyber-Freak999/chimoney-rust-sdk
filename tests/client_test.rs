@@ -42,17 +42,13 @@ fn test_client_builder_custom_base_url() {
 
 #[test]
 fn test_client_builder_max_retries() {
-    let client = ChimoneyClient::builder("test_key")
-        .max_retries(5)
-        .build();
+    let client = ChimoneyClient::builder("test_key").max_retries(5).build();
     assert!(client.is_ok());
 }
 
 #[test]
 fn test_client_builder_timeout() {
-    let client = ChimoneyClient::builder("test_key")
-        .timeout(60)
-        .build();
+    let client = ChimoneyClient::builder("test_key").timeout(60).build();
     assert!(client.is_ok());
 }
 
