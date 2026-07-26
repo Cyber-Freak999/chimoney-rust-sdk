@@ -87,6 +87,13 @@ impl ChimoneyClient {
             url.push_str(params);
         }
 
+        log::debug!("{} {}", match method {
+            Method::Get => "GET",
+            Method::Post => "POST",
+            Method::Delete => "DELETE",
+            Method::Patch => "PATCH",
+        }, url);
+
         let mut req = match method {
             Method::Get => self.client.get(&url),
             Method::Post => self.client.post(&url),
@@ -104,6 +111,7 @@ impl ChimoneyClient {
         }
 
         let response = req.send().await.map_err(ChimoneyError::MiddlewareError)?;
+        log::debug!("Response {} {}", response.status(), url);
         self.handle_response(response).await
     }
 
@@ -1667,9 +1675,11 @@ impl ChimoneyClient {
 
             if status.as_u16() == 429 {
                 let retry_after = json["retry_after"].as_u64().unwrap_or(60);
+                log::warn!("Rate limited, retry after {}s", retry_after);
                 return Err(ChimoneyError::RateLimited { retry_after });
             }
 
+            log::warn!("API error {}: {}", status, message);
             Err(ChimoneyError::ApiError {
                 status: status.as_u16(),
                 message,

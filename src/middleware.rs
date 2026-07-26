@@ -15,6 +15,7 @@ use crate::error::{ChimoneyError, Result};
 ///
 /// A `ClientWithMiddleware` with retry middleware configured.
 pub fn build_client(max_retries: u32, timeout_secs: u64) -> Result<ClientWithMiddleware> {
+    log::debug!("Building HTTP client: max_retries={}, timeout={}s", max_retries, timeout_secs);
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(max_retries);
 
     let reqwest_client = Client::builder()
