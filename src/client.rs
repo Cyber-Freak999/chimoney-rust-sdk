@@ -1,11 +1,11 @@
 use std::fmt;
 
 use reqwest_middleware::ClientWithMiddleware;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::error::{ChimoneyError, Result};
-use crate::middleware::{build_client, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_SECS};
+use crate::middleware::{DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_SECS, build_client};
 
 /// Chimoney API client.
 ///
@@ -87,6 +87,17 @@ impl ChimoneyClient {
             url.push_str(params);
         }
 
+        log::debug!(
+            "{} {}",
+            match method {
+                Method::Get => "GET",
+                Method::Post => "POST",
+                Method::Delete => "DELETE",
+                Method::Patch => "PATCH",
+            },
+            url
+        );
+
         let mut req = match method {
             Method::Get => self.client.get(&url),
             Method::Post => self.client.post(&url),
@@ -104,6 +115,7 @@ impl ChimoneyClient {
         }
 
         let response = req.send().await.map_err(ChimoneyError::MiddlewareError)?;
+        log::debug!("Response {} {}", response.status(), url);
         self.handle_response(response).await
     }
 
@@ -136,11 +148,7 @@ impl ChimoneyClient {
             .map_err(|e| ChimoneyError::ParseError(e.to_string()))
     }
 
-    async fn get_json<R: DeserializeOwned>(
-        &self,
-        path: &str,
-        query: Option<&str>,
-    ) -> Result<R> {
+    async fn get_json<R: DeserializeOwned>(&self, path: &str, query: Option<&str>) -> Result<R> {
         let response = self.request(Method::Get, path, None, query).await?;
         let json: serde_json::Value = serde_json::from_str(&response)
             .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
@@ -159,11 +167,7 @@ impl ChimoneyClient {
             .map_err(|e| ChimoneyError::ParseError(e.to_string()))
     }
 
-    async fn delete_json<R: DeserializeOwned>(
-        &self,
-        path: &str,
-        query: Option<&str>,
-    ) -> Result<R> {
+    async fn delete_json<R: DeserializeOwned>(&self, path: &str, query: Option<&str>) -> Result<R> {
         let response = self.request(Method::Delete, path, None, query).await?;
         let json: serde_json::Value = serde_json::from_str(&response)
             .map_err(|e| ChimoneyError::ParseError(e.to_string()))?;
@@ -195,7 +199,10 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_transactions(&self, account_id: &str) -> Result<Vec<crate::types::Transaction>> {
+    pub async fn get_transactions(
+        &self,
+        account_id: &str,
+    ) -> Result<Vec<crate::types::Transaction>> {
         let path = "/v0.2.4/accounts/transactions";
         let body = serde_json::json!({ "subAccount": account_id });
         self.post_json_data(path, &body, None).await
@@ -228,11 +235,10 @@ impl ChimoneyClient {
     pub async fn get_issue_id_transaction(
         &self,
         issue_id: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Vec<crate::types::IssueIdTransactionItem>> {
         let path = "/v0.2.4/accounts/issue-id-transactions";
         let body = serde_json::json!({ "issueID": issue_id });
-        self.post_json_data::<_, serde_json::Value>(path, &body, None)
-            .await
+        self.post_json_data(path, &body, None).await
     }
 
     /// Get public profile.
@@ -244,11 +250,10 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_public_profile(&self) -> Result<serde_json::Value> {
+    pub async fn get_public_profile(&self) -> Result<crate::types::PublicProfile> {
         let path = "/v0.2.4/accounts/public-profile";
         let body = serde_json::json!({});
-        self.post_json_data::<_, serde_json::Value>(path, &body, None)
-            .await
+        self.post_json_data(path, &body, None).await
     }
 
     /// Transfer between accounts.
@@ -299,7 +304,7 @@ impl ChimoneyClient {
         chi_ref: &str,
     ) -> Result<crate::types::DeleteUnpaidTransactionResponse> {
         let path = "/v0.2.4/accounts/delete-unpaid-transaction";
-        let query = format!("chiRef={}", chi_ref);
+        let query = format!("chiRef={chi_ref}");
         self.delete_json(path, Some(&query)).await
     }
 
@@ -386,11 +391,10 @@ impl ChimoneyClient {
     pub async fn simulate_payment(
         &self,
         issue_id: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<crate::types::SimulatePaymentData> {
         let path = "/v0.2.4/payment/simulate";
         let body = serde_json::json!({ "issueID": issue_id });
-        self.post_json_data::<_, serde_json::Value>(path, &body, None)
-            .await
+        self.post_json_data(path, &body, None).await
     }
 
     /// Simulate funding via a specified rail (staging only).
@@ -405,10 +409,9 @@ impl ChimoneyClient {
     pub async fn simulate_funding(
         &self,
         request: &crate::types::SimulateFundingRequest,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<crate::types::SimulateFundingData> {
         let path = "/v0.2.4/payment/simulate-funding";
-        self.post_json_data::<_, serde_json::Value>(path, request, None)
-            .await
+        self.post_json_data(path, request, None).await
     }
 
     // ── Payout Methods ─────────────────────────────────────────────
@@ -631,8 +634,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::CreateAgentRequest,
     ) -> Result<crate::types::AgentResponse> {
-        self.post_json("/v0.2.4/agents/create", request, None)
-            .await
+        self.post_json("/v0.2.4/agents/create", request, None).await
     }
 
     /// List all agents.
@@ -657,12 +659,9 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_agent(
-        &self,
-        agent_id: &str,
-    ) -> Result<crate::types::AgentResponse> {
+    pub async fn get_agent(&self, agent_id: &str) -> Result<crate::types::AgentResponse> {
         let path = "/v0.2.4/agents/get";
-        let query = format!("agentId={}", agent_id);
+        let query = format!("agentId={agent_id}");
         self.get_json(path, Some(&query)).await
     }
 
@@ -748,7 +747,7 @@ impl ChimoneyClient {
         agent_id: &str,
     ) -> Result<crate::types::AgentApiKeyResponse> {
         let path = "/v0.2.4/agents/api-key";
-        let query = format!("agentId={}", agent_id);
+        let query = format!("agentId={agent_id}");
         self.get_json(path, Some(&query)).await
     }
 
@@ -829,9 +828,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_beneficiaries(
-        &self,
-    ) -> Result<crate::types::BeneficiaryListResponse> {
+    pub async fn get_beneficiaries(&self) -> Result<crate::types::BeneficiaryListResponse> {
         self.get_json("/v0.2.4/beneficiary", None).await
     }
 
@@ -1005,7 +1002,7 @@ impl ChimoneyClient {
         sub_account_id: &str,
     ) -> Result<crate::types::SubAccountResponse> {
         let path = "/v0.2.4/sub-account/delete";
-        let query = format!("id={}", sub_account_id);
+        let query = format!("id={sub_account_id}");
         self.delete_json(path, Some(&query)).await
     }
 
@@ -1021,9 +1018,9 @@ impl ChimoneyClient {
     pub async fn get_sub_account(
         &self,
         sub_account_id: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<crate::types::SubAccountListItem> {
         let path = "/v0.2.4/sub-account/get";
-        let query = format!("id={}", sub_account_id);
+        let query = format!("id={sub_account_id}");
         self.get_json_data(path, Some(&query)).await
     }
 
@@ -1036,9 +1033,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn list_sub_accounts(
-        &self,
-    ) -> Result<Vec<serde_json::Value>> {
+    pub async fn list_sub_accounts(&self) -> Result<Vec<crate::types::SubAccountListItem>> {
         let path = "/v0.2.4/sub-account/list";
         self.get_json_data(path, None).await
     }
@@ -1096,15 +1091,15 @@ impl ChimoneyClient {
         start_before_id: Option<&str>,
     ) -> Result<crate::types::CommunityMembersResponse> {
         let path = "/v0.2.4/sub-account/community/members";
-        let mut query = format!("communityID={}", community_id);
+        let mut query = format!("communityID={community_id}");
         if let Some(l) = limit {
-            query.push_str(&format!("&limit={}", l));
+            query.push_str(&format!("&limit={l}"));
         }
         if let Some(id) = start_after_id {
-            query.push_str(&format!("&startAfterId={}", id));
+            query.push_str(&format!("&startAfterId={id}"));
         }
         if let Some(id) = start_before_id {
-            query.push_str(&format!("&startBeforeId={}", id));
+            query.push_str(&format!("&startBeforeId={id}"));
         }
         self.get_json(path, Some(&query)).await
     }
@@ -1124,9 +1119,9 @@ impl ChimoneyClient {
         redirect_url: Option<&str>,
     ) -> Result<crate::types::KycLinkResponse> {
         let path = "/v0.2.4/sub-account/kyc/link";
-        let mut query = format!("subAccountID={}", sub_account_id);
+        let mut query = format!("subAccountID={sub_account_id}");
         if let Some(url) = redirect_url {
-            query.push_str(&format!("&redirectUrl={}", url));
+            query.push_str(&format!("&redirectUrl={url}"));
         }
         self.get_json(path, Some(&query)).await
     }
@@ -1142,10 +1137,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn list_wallets(
-        &self,
-        sub_account: &str,
-    ) -> Result<crate::types::WalletList> {
+    pub async fn list_wallets(&self, sub_account: &str) -> Result<crate::types::WalletList> {
         let path = "/v0.2.4/wallets/list";
         let body = serde_json::json!({ "subAccount": sub_account });
         self.post_json(path, &body, None).await
@@ -1235,7 +1227,7 @@ impl ChimoneyClient {
         wallet_id: &str,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
         let path = "/v0.2.4/multicurrency-wallets/get";
-        let query = format!("walletId={}", wallet_id);
+        let query = format!("walletId={wallet_id}");
         self.get_json(path, Some(&query)).await
     }
 
@@ -1268,8 +1260,12 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::TransferQuoteRequest,
     ) -> Result<crate::types::TransferQuoteResponse> {
-        self.post_json("/v0.2.4/multicurrency-wallets/transfer-quote", request, None)
-            .await
+        self.post_json(
+            "/v0.2.4/multicurrency-wallets/transfer-quote",
+            request,
+            None,
+        )
+        .await
     }
 
     /// Transfer between multicurrency wallets.
@@ -1334,7 +1330,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_airtime_countries(&self) -> Result<serde_json::Value> {
+    pub async fn get_airtime_countries(&self) -> Result<Vec<String>> {
         self.get_json_data("/v0.2.4/info/airtime-countries", None)
             .await
     }
@@ -1350,9 +1346,8 @@ impl ChimoneyClient {
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
     pub async fn get_assets(&self, country_code: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/assets";
-        let query = format!("countryCode={}", country_code);
-        self.get_json_data(path, Some(&query))
-            .await
+        let query = format!("countryCode={country_code}");
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// Get banks by country code.
@@ -1364,11 +1359,10 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_banks(&self, country_code: &str) -> Result<serde_json::Value> {
+    pub async fn get_banks(&self, country_code: &str) -> Result<Vec<crate::types::BankInfo>> {
         let path = "/v0.2.4/info/country-banks";
-        let query = format!("countryCode={}", country_code);
-        self.get_json_data(path, Some(&query))
-            .await
+        let query = format!("countryCode={country_code}");
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// Get bank branches.
@@ -1380,11 +1374,13 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_bank_branches(&self, bank_code: &str) -> Result<serde_json::Value> {
+    pub async fn get_bank_branches(
+        &self,
+        bank_code: &str,
+    ) -> Result<Vec<crate::types::BankBranch>> {
         let path = "/v0.2.4/info/bank-branches";
-        let query = format!("bankCode={}", bank_code);
-        self.get_json_data(path, Some(&query))
-            .await
+        let query = format!("bankCode={bank_code}");
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// Get exchange rates.
@@ -1414,11 +1410,12 @@ impl ChimoneyClient {
         &self,
         currency: &str,
         amount: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<crate::types::LocalToUsdData> {
         let path = "/v0.2.4/info/local-amount-to-usd";
-        let query = format!("originCurrency={}&amountInOriginCurrency={}", currency, amount);
-        self.get_json_data(path, Some(&query))
-            .await
+        let query = format!(
+            "originCurrency={currency}&amountInOriginCurrency={amount}"
+        );
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// Convert USD to local currency.
@@ -1434,11 +1431,10 @@ impl ChimoneyClient {
         &self,
         currency: &str,
         amount: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<crate::types::UsdToLocalData> {
         let path = "/v0.2.4/info/usd-amount-in-local";
-        let query = format!("destinationCurrency={}&amountInUSD={}", currency, amount);
-        self.get_json_data(path, Some(&query))
-            .await
+        let query = format!("destinationCurrency={currency}&amountInUSD={amount}");
+        self.get_json_data(path, Some(&query)).await
     }
 
     /// Get mobile money codes.
@@ -1450,7 +1446,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn get_mobile_money_codes(&self) -> Result<serde_json::Value> {
+    pub async fn get_mobile_money_codes(&self) -> Result<Vec<crate::types::MobileMoneyCode>> {
         self.get_json_data("/v0.2.4/info/mobile-money-codes", None)
             .await
     }
@@ -1474,12 +1470,12 @@ impl ChimoneyClient {
         take: Option<i32>,
     ) -> Result<crate::types::BankSearchResponse> {
         let path = "/v0.2.4/info/bank-search";
-        let mut query = format!("country={}&search={}", country, search);
+        let mut query = format!("country={country}&search={search}");
         if let Some(s) = skip {
-            query.push_str(&format!("&skip={}", s));
+            query.push_str(&format!("&skip={s}"));
         }
         if let Some(t) = take {
-            query.push_str(&format!("&take={}", t));
+            query.push_str(&format!("&take={t}"));
         }
         self.get_json(path, Some(&query)).await
     }
@@ -1498,8 +1494,8 @@ impl ChimoneyClient {
         country_code: &str,
         method: Option<&str>,
     ) -> Result<crate::types::BeneficiaryRulesResponse> {
-        let path = format!("/v0.2.4/info/beneficiary-rules/{}", country_code);
-        let query = method.map(|m| format!("method={}", m));
+        let path = format!("/v0.2.4/info/beneficiary-rules/{country_code}");
+        let query = method.map(|m| format!("method={m}"));
         self.get_json(&path, query.as_deref()).await
     }
 
@@ -1563,10 +1559,7 @@ impl ChimoneyClient {
     /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
     /// [`ChimoneyError::RateLimited`] if the API returns 429,
     /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
-    pub async fn search_merchants(
-        &self,
-        search: &str,
-    ) -> Result<serde_json::Value> {
+    pub async fn search_merchants(&self, search: &str) -> Result<serde_json::Value> {
         let path = "/v0.2.4/info/bill-merchants/ca";
         let body = serde_json::json!({ "search": search });
         self.post_json_data::<_, serde_json::Value>(path, &body, None)
@@ -1587,7 +1580,7 @@ impl ChimoneyClient {
         country_code: &str,
     ) -> Result<crate::types::CountryStatesResponse> {
         let path = "/v0.2.4/info/country-states-regions";
-        let query = format!("countryCode={}", country_code);
+        let query = format!("countryCode={country_code}");
         self.get_json(path, Some(&query)).await
     }
 
@@ -1605,7 +1598,7 @@ impl ChimoneyClient {
         country_code: &str,
         bank_code: &str,
         account_number: &str,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Vec<crate::types::VerifiedBankAccount>> {
         let path = "/v0.2.4/info/verify-bank-account";
         let body = serde_json::json!({
             "verifyAccountNumbers": [{
@@ -1614,8 +1607,7 @@ impl ChimoneyClient {
                 "account_number": account_number
             }]
         });
-        self.post_json_data::<_, serde_json::Value>(path, &body, None)
-            .await
+        self.post_json_data(path, &body, None).await
     }
 
     // ── Passport Methods ────────────────────────────────────────────
@@ -1680,9 +1672,11 @@ impl ChimoneyClient {
 
             if status.as_u16() == 429 {
                 let retry_after = json["retry_after"].as_u64().unwrap_or(60);
+                log::warn!("Rate limited, retry after {retry_after}s");
                 return Err(ChimoneyError::RateLimited { retry_after });
             }
 
+            log::warn!("API error {status}: {message}");
             Err(ChimoneyError::ApiError {
                 status: status.as_u16(),
                 message,

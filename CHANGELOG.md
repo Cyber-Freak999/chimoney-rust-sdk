@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-07-26
+
+### Added
+- Typed response structs for 13 methods (previously returned `serde_json::Value`)
+- Logging for request/response/error events via `log` crate
+
+### Changed
+- Bumped MSRV from 1.65 to 1.85 (required by transitive dependency `idna_adapter`)
+- Upgraded edition from 2021 to 2024
+- Inlined format args (clippy cleanup)
+
 ## [1.1.0] - 2026-07-26
 
 ### Added

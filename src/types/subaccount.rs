@@ -176,6 +176,58 @@ pub struct CommunityMembersResponse {
     pub data: Option<Vec<CommunityMember>>,
 }
 
+/// A single sub-account detail item (list variant).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubAccountListItem {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub last_name: Option<String>,
+    #[serde(default)]
+    pub parent: Option<String>,
+    #[serde(default)]
+    pub fee_percent: Option<i64>,
+    #[serde(default)]
+    pub account_second_currencies: Option<Vec<String>>,
+    #[serde(default)]
+    pub verified: Option<bool>,
+    #[serde(default)]
+    pub subscription: Option<serde_json::Value>,
+    #[serde(default)]
+    pub is_scrim_user: Option<bool>,
+    #[serde(default)]
+    pub sub_account: Option<bool>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub preferred_exchange_rate: Option<bool>,
+    #[serde(default)]
+    pub uid: Option<String>,
+    #[serde(default)]
+    pub approved: Option<bool>,
+    #[serde(default)]
+    pub created_date: Option<String>,
+    #[serde(default)]
+    pub join_date: Option<String>,
+    #[serde(default)]
+    pub phone_number: Option<String>,
+    #[serde(default)]
+    pub meta: Option<serde_json::Value>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub api_use_enabled: Option<bool>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub p_id: Option<i64>,
+    #[serde(default)]
+    pub verification: Option<serde_json::Value>,
+    #[serde(default)]
+    pub wallets: Option<Vec<serde_json::Value>>,
+}
+
 /// KYC link response data.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]

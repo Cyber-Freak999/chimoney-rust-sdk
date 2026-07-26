@@ -138,3 +138,125 @@ pub struct AccountOperationResponse {
     #[serde(default)]
     pub data: Option<serde_json::Value>,
 }
+
+/// A single issue ID transaction item.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueIdTransactionItem {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub account_number: Option<String>,
+    #[serde(default)]
+    pub issue_id: Option<String>,
+    #[serde(default)]
+    pub fee: Option<f64>,
+    #[serde(default)]
+    pub account_bank: Option<String>,
+    #[serde(default)]
+    pub r#type: Option<String>,
+    #[serde(default)]
+    pub issuer: Option<String>,
+    #[serde(default)]
+    pub enabled_to_redeem: Option<Vec<String>>,
+    #[serde(default)]
+    pub reference: Option<String>,
+    #[serde(default)]
+    pub chi_ref: Option<String>,
+    #[serde(default)]
+    pub issue_date: Option<String>,
+    #[serde(default)]
+    pub initiated_by: Option<String>,
+    #[serde(default)]
+    pub redeem_data: Option<serde_json::Value>,
+    #[serde(default)]
+    pub value_in_usd: Option<f64>,
+    #[serde(default)]
+    pub chimoney: Option<f64>,
+    #[serde(default)]
+    pub country_to_send: Option<String>,
+    #[serde(default)]
+    pub amount: Option<f64>,
+    #[serde(default)]
+    pub personalized_message: Option<String>,
+    #[serde(default)]
+    pub branch_code: Option<String>,
+    #[serde(default)]
+    pub t_id: Option<i64>,
+    #[serde(default)]
+    pub collection_payment_issue_id: Option<String>,
+    #[serde(default)]
+    pub narration: Option<String>,
+    #[serde(default)]
+    pub fullname: Option<String>,
+    #[serde(default)]
+    pub payment_date: Option<String>,
+    #[serde(default)]
+    pub redeem_date: Option<String>,
+    #[serde(default)]
+    pub meta: Option<serde_json::Value>,
+    #[serde(default)]
+    pub payout: Option<serde_json::Value>,
+    #[serde(default)]
+    pub updated_date: Option<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub delivery_status: Option<String>,
+}
+
+/// Public profile verification info.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileVerification {
+    #[serde(default)]
+    pub status: Option<String>,
+}
+
+/// Public profile payment data.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfilePaymentData {
+    #[serde(default)]
+    pub interledger_wallet_address: Option<String>,
+}
+
+/// Public profile of a Chimoney user.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicProfile {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub account_second_currencies: Option<Vec<String>>,
+    #[serde(default)]
+    pub preferred_exchange_rate: Option<bool>,
+    #[serde(default)]
+    pub created_date: Option<String>,
+    #[serde(default)]
+    pub join_date: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub verification: Option<ProfileVerification>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub last_name: Option<String>,
+    #[serde(default)]
+    pub career: Option<String>,
+    #[serde(default)]
+    pub purpose_of_chimoney: Option<String>,
+    #[serde(default)]
+    pub socials: Option<serde_json::Value>,
+    #[serde(default)]
+    pub updated_date: Option<String>,
+    #[serde(default)]
+    pub p_id: Option<i64>,
+    #[serde(default)]
+    pub points: Option<i64>,
+    #[serde(default)]
+    pub badges: Option<Vec<String>>,
+    #[serde(default)]
+    pub payment_data: Option<ProfilePaymentData>,
+}

@@ -1,5 +1,5 @@
-use chimoney_rust_sdk::types::*;
 use chimoney_rust_sdk::ChimoneyError;
+use chimoney_rust_sdk::types::*;
 use std::collections::HashMap;
 
 #[test]
@@ -958,7 +958,10 @@ fn test_agent_api_key_response_deserialization() {
     let response: AgentApiKeyResponse = serde_json::from_str(json).unwrap();
     assert_eq!(response.agent_id, Some("agent_key".to_string()));
     assert_eq!(response.api_key_prefix, Some("chm_abc123".to_string()));
-    assert_eq!(response.created_at, Some("2024-06-01T00:00:00Z".to_string()));
+    assert_eq!(
+        response.created_at,
+        Some("2024-06-01T00:00:00Z".to_string())
+    );
 }
 
 #[test]
@@ -1148,7 +1151,10 @@ fn test_beneficiary_deserialization() {
     assert_eq!(beneficiary.bank_code, Some("044".to_string()));
     assert_eq!(beneficiary.country_code, Some("NG".to_string()));
     assert_eq!(beneficiary.name, "John Doe");
-    assert_eq!(beneficiary.created_at, Some("2024-01-01T00:00:00Z".to_string()));
+    assert_eq!(
+        beneficiary.created_at,
+        Some("2024-01-01T00:00:00Z".to_string())
+    );
 }
 
 #[test]
@@ -1945,7 +1951,10 @@ fn test_community_member_deserialization() {
         "joinDate": "2024-07-17T09:25:27.543Z"
     }"#;
     let member: CommunityMember = serde_json::from_str(json).unwrap();
-    assert_eq!(member.uid, Some("1f8581c9-98f4-49a0-82f9-2a27fb27bbf5".to_string()));
+    assert_eq!(
+        member.uid,
+        Some("1f8581c9-98f4-49a0-82f9-2a27fb27bbf5".to_string())
+    );
     assert_eq!(member.name, Some("Michael".to_string()));
     assert_eq!(member.verified, Some(true));
     assert_eq!(member.points, Some(250));
@@ -1961,7 +1970,10 @@ fn test_kyc_link_data_deserialization() {
     let data: KycLinkData = serde_json::from_str(json).unwrap();
     assert!(data.kyc_url.contains("verify/kyc"));
     assert_eq!(data.sub_account_id, "907b90ef-d723-4b07-9f74-480afb5f09ef");
-    assert_eq!(data.redirect_url, Some("https://example.com/kyc-complete".to_string()));
+    assert_eq!(
+        data.redirect_url,
+        Some("https://example.com/kyc-complete".to_string())
+    );
 }
 
 // ── Account Extras Tests ──────────────────────────────────────────
@@ -2048,7 +2060,8 @@ fn test_passport_data_deserialization() {
 #[test]
 fn test_generate_invoice_request_serialization() {
     let request = GenerateInvoiceRequest {
-        instruction: "Create an invoice from Jane Doe to Chimoney Incorporated for Web Dev Service".to_string(),
+        instruction: "Create an invoice from Jane Doe to Chimoney Incorporated for Web Dev Service"
+            .to_string(),
     };
     let json = serde_json::to_string(&request).unwrap();
     assert!(json.contains("instruction"));
@@ -2068,7 +2081,10 @@ fn test_invoice_data_deserialization() {
         }
     }"#;
     let data: InvoiceData = serde_json::from_str(json).unwrap();
-    assert_eq!(data.download_url, Some("https://example.com/invoice.pdf".to_string()));
+    assert_eq!(
+        data.download_url,
+        Some("https://example.com/invoice.pdf".to_string())
+    );
     assert!(data.json.is_some());
 }
 
