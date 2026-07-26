@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.4.0] - 2026-07-26
+
+### Added
+- 3 new endpoint methods:
+  - `simulate_interac_funding` — Simulate Interac funding (sandbox)
+  - `local_amount_in_usd` — Convert local currency amount to USD (newer endpoint)
+  - `verify_bank_account_number` — Verify bank account numbers (legacy v0.2)
+- 7 domain-specific example files:
+  - `examples/beneficiary.rs` — get_beneficiaries, create_bank_beneficiary, preview_transfer
+  - `examples/redeem.rs` — redeem_airtime, redeem_chimoney, redeem_giftcard, redeem_mobile_money, redeem_any
+  - `examples/subaccount.rs` — create, update, delete, get, list sub-accounts
+  - `examples/community.rs` — create_community, update_community, get_community_members, get_kyc_link
+  - `examples/info.rs` — all 16 info endpoints
+  - `examples/passport.rs` — manage_passport (check, create, resend)
+  - `examples/ai.rs` — generate_invoice
+
+### Fixed
+- `payout_interledger` path updated to `/payouts/interledger-wallet-address`
+- `get_transfer_quote` path updated to `/multicurrency-wallets/transfer/quote`
+- `update_multicurrency_wallet` method changed from PATCH to POST
+- `get_beneficiary_rules` path parameter renamed to camelCase
+- `verify_bank_account` moved to legacy v0.2 endpoint
+
+### Metrics
+- Endpoints: 83 → 86 (100% API coverage)
+- Examples: 9 → 16 (all 13 domains covered)
+
 ## [1.3.0] - 2026-07-26
 
 ### Added
