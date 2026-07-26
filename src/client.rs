@@ -1412,9 +1412,7 @@ impl ChimoneyClient {
         amount: &str,
     ) -> Result<crate::types::LocalToUsdData> {
         let path = "/v0.2.4/info/local-amount-to-usd";
-        let query = format!(
-            "originCurrency={currency}&amountInOriginCurrency={amount}"
-        );
+        let query = format!("originCurrency={currency}&amountInOriginCurrency={amount}");
         self.get_json_data(path, Some(&query)).await
     }
 
