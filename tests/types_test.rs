@@ -2408,10 +2408,7 @@ fn test_beneficiary_rules_response_deserialization() {
     assert_eq!(resp.data[0].name, "account_number");
     assert_eq!(resp.data[0].label, "Account Number");
     assert!(resp.data[0].required);
-    assert_eq!(
-        resp.data[0].regex_pattern,
-        Some("^[0-9]{10}$".to_string())
-    );
+    assert_eq!(resp.data[0].regex_pattern, Some("^[0-9]{10}$".to_string()));
 }
 
 // ── IdentificationTypesResponse Tests ──────────────────────────────
@@ -2479,14 +2476,8 @@ fn test_validate_voucher_response_deserialization() {
     let resp: ValidateVoucherResponse = serde_json::from_str(json).unwrap();
     assert_eq!(resp.status, "success");
     assert_eq!(resp.data.code, "ABC123");
-    assert_eq!(
-        resp.data.created_date,
-        Some("2024-01-01".to_string())
-    );
-    assert_eq!(
-        resp.data.expiry_date,
-        Some("2024-12-31".to_string())
-    );
+    assert_eq!(resp.data.created_date, Some("2024-01-01".to_string()));
+    assert_eq!(resp.data.expiry_date, Some("2024-12-31".to_string()));
 }
 
 // ── CountryStatesResponse Tests ─────────────────────────────────────
@@ -2554,10 +2545,7 @@ fn test_passport_response_deserialization() {
     assert_eq!(resp.status, "success");
     let data = resp.data.unwrap();
     assert_eq!(data.passport_status, Some(PassportStatus::Claimed));
-    assert_eq!(
-        data.aport_passport_id,
-        Some("pp_123".to_string())
-    );
+    assert_eq!(data.aport_passport_id, Some("pp_123".to_string()));
     assert_eq!(data.claimed, Some(true));
 }
 
