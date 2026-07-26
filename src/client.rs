@@ -414,6 +414,23 @@ impl ChimoneyClient {
         self.post_json_data(path, request, None).await
     }
 
+    /// Simulate Interac funding (staging only).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
+    pub async fn simulate_interac_funding(
+        &self,
+        request: &crate::types::SimulateFundingRequest,
+    ) -> Result<crate::types::SimulateFundingData> {
+        let path = "/v0.2.4/payment/simulate-interac-funding";
+        self.post_json_data(path, request, None).await
+    }
+
     // ── Payout Methods ─────────────────────────────────────────────
 
     /// Payout via bank transfer.
@@ -513,7 +530,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::InterledgerPayoutRequest,
     ) -> Result<crate::types::PayoutResponse> {
-        self.post_json("/v0.2.4/payouts/interledger-wallet", request, None)
+        self.post_json("/v0.2.4/payouts/interledger-wallet-address", request, None)
             .await
     }
 
@@ -1209,7 +1226,7 @@ impl ChimoneyClient {
         &self,
         request: &crate::types::UpdateMulticurrencyWalletRequest,
     ) -> Result<crate::types::MulticurrencyWalletResponse> {
-        self.patch_json("/v0.2.4/multicurrency-wallets/update", request, None)
+        self.post_json("/v0.2.4/multicurrency-wallets/update", request, None)
             .await
     }
 
@@ -1261,7 +1278,7 @@ impl ChimoneyClient {
         request: &crate::types::TransferQuoteRequest,
     ) -> Result<crate::types::TransferQuoteResponse> {
         self.post_json(
-            "/v0.2.4/multicurrency-wallets/transfer-quote",
+            "/v0.2.4/multicurrency-wallets/transfer/quote",
             request,
             None,
         )
@@ -1416,6 +1433,25 @@ impl ChimoneyClient {
         self.get_json_data(path, Some(&query)).await
     }
 
+    /// Convert local currency amount to USD (newer endpoint).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
+    pub async fn local_amount_in_usd(
+        &self,
+        currency: &str,
+        amount: &str,
+    ) -> Result<crate::types::LocalToUsdData> {
+        let path = "/v0.2.4/info/local-amount-in-usd";
+        let query = format!("originCurrency={currency}&amountInOriginCurrency={amount}");
+        self.get_json_data(path, Some(&query)).await
+    }
+
     /// Convert USD to local currency.
     ///
     /// # Errors
@@ -1492,7 +1528,7 @@ impl ChimoneyClient {
         country_code: &str,
         method: Option<&str>,
     ) -> Result<crate::types::BeneficiaryRulesResponse> {
-        let path = format!("/v0.2.4/info/beneficiary-rules/{country_code}");
+        let path = format!("/v0.2.4/info/beneficiary-rules/{}", country_code);
         let query = method.map(|m| format!("method={m}"));
         self.get_json(&path, query.as_deref()).await
     }
@@ -1598,6 +1634,32 @@ impl ChimoneyClient {
         account_number: &str,
     ) -> Result<Vec<crate::types::VerifiedBankAccount>> {
         let path = "/v0.2.4/info/verify-bank-account";
+        let body = serde_json::json!({
+            "verifyAccountNumbers": [{
+                "countryCode": country_code,
+                "account_bank": bank_code,
+                "account_number": account_number
+            }]
+        });
+        self.post_json_data(path, &body, None).await
+    }
+
+    /// Verify bank account numbers (legacy v0.2 endpoint).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChimoneyError::RequestFailed`] if the HTTP request fails,
+    /// [`ChimoneyError::MiddlewareError`] if retry middleware fails,
+    /// [`ChimoneyError::ApiError`] if the API returns a non-2xx status,
+    /// [`ChimoneyError::RateLimited`] if the API returns 429,
+    /// or [`ChimoneyError::ParseError`] if the response cannot be parsed.
+    pub async fn verify_bank_account_number(
+        &self,
+        country_code: &str,
+        bank_code: &str,
+        account_number: &str,
+    ) -> Result<serde_json::Value> {
+        let path = "/v0.2/info/verify-bank-account-number";
         let body = serde_json::json!({
             "verifyAccountNumbers": [{
                 "countryCode": country_code,
