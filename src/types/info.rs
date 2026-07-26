@@ -254,3 +254,81 @@ pub struct CountryStatesResponse {
     /// List of states/regions.
     pub data: Vec<CountryState>,
 }
+
+/// A bank information item (id, code, name).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankInfo {
+    pub id: f64,
+    pub code: String,
+    pub name: String,
+}
+
+/// A bank branch item.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankBranch {
+    pub id: f64,
+    #[serde(default)]
+    pub branch_code: Option<String>,
+    #[serde(default)]
+    pub branch_name: Option<String>,
+    #[serde(default)]
+    pub swift_code: Option<String>,
+    #[serde(default)]
+    pub bic: Option<String>,
+    #[serde(default)]
+    pub bank_id: Option<f64>,
+}
+
+/// A mobile money code entry.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MobileMoneyCode {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub country: Option<String>,
+    #[serde(default)]
+    pub code: Option<String>,
+    #[serde(default)]
+    pub provider: Option<String>,
+}
+
+/// Result of a bank account verification.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifiedBankAccount {
+    #[serde(default)]
+    pub account_name: Option<String>,
+    #[serde(default)]
+    pub account_number: Option<String>,
+}
+
+/// Data returned from the local-to-USD conversion endpoint.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalToUsdData {
+    #[serde(default)]
+    pub amount_in_origin_currency: Option<String>,
+    #[serde(default)]
+    pub origin_currency: Option<String>,
+    #[serde(default)]
+    pub amount_in_usd: Option<f64>,
+    #[serde(default)]
+    pub valid_until: Option<String>,
+}
+
+/// Data returned from the USD-to-local conversion endpoint.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsdToLocalData {
+    #[serde(default)]
+    pub amount_in_usd: Option<String>,
+    #[serde(default)]
+    pub destination_currency: Option<String>,
+    #[serde(default)]
+    pub amount_in_destination_currency: Option<f64>,
+    #[serde(default)]
+    pub valid_until: Option<String>,
+}

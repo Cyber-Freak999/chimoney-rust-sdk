@@ -57,3 +57,29 @@ pub struct SimulateFundingRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clabe: Option<String>,
 }
+
+/// Data returned from the simulate payment endpoint.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimulatePaymentData {
+    #[serde(default)]
+    pub payment_link: Option<String>,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub data: Option<Vec<serde_json::Value>>,
+    #[serde(flatten)]
+    pub extra: serde_json::Value,
+}
+
+/// Data returned from the simulate funding endpoint.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimulateFundingData {
+    #[serde(default)]
+    pub simulated: Option<bool>,
+    #[serde(default)]
+    pub simulated_amount: Option<f64>,
+    #[serde(default)]
+    pub rail: Option<String>,
+}
