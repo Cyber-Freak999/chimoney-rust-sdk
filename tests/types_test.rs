@@ -1,5 +1,5 @@
-use chimoney_rust_sdk::types::*;
 use chimoney_rust_sdk::ChimoneyError;
+use chimoney_rust_sdk::types::*;
 use std::collections::HashMap;
 
 #[test]
