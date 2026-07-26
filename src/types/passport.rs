@@ -4,8 +4,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PassportAction {
+    /// Check the status of an existing passport.
     Check,
+    /// Create a new passport.
     Create,
+    /// Resend a passport claim email.
     Resend,
 }
 
@@ -34,8 +37,11 @@ pub struct PassportRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PassportStatus {
+    /// No passport exists for this account.
     Missing,
+    /// Passport exists but has not been claimed.
     Unclaimed,
+    /// Passport has been claimed by the user.
     Claimed,
 }
 
@@ -43,14 +49,19 @@ pub enum PassportStatus {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassportData {
+    /// Current status of the passport.
     #[serde(default)]
     pub passport_status: Option<PassportStatus>,
+    /// Unique identifier for the APort passport.
     #[serde(default)]
     pub aport_passport_id: Option<String>,
+    /// Whether the passport has been claimed.
     #[serde(default)]
     pub claimed: Option<bool>,
+    /// Raw passport payload from the API.
     #[serde(default)]
     pub passport: Option<serde_json::Value>,
+    /// Whether a claim email was resent successfully.
     #[serde(default)]
     pub claim_email_resent: Option<bool>,
 }
@@ -59,7 +70,9 @@ pub struct PassportData {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassportResponse {
+    /// Response status string (e.g. `"success"`).
     pub status: String,
+    /// Passport data, present when the request succeeds.
     #[serde(default)]
     pub data: Option<PassportData>,
 }

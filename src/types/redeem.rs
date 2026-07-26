@@ -19,6 +19,7 @@ pub struct RedeemRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedeemAirtimeRequest {
+    /// Base redeem request fields.
     #[serde(flatten)]
     pub base: RedeemRequest,
     /// Country code.
@@ -34,6 +35,7 @@ pub struct RedeemAirtimeRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedeemChimoneyRequest {
+    /// Base redeem request fields.
     #[serde(flatten)]
     pub base: RedeemRequest,
     /// Chimoney key-value pairs.
@@ -44,6 +46,7 @@ pub struct RedeemChimoneyRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedeemGiftCardRequest {
+    /// Base redeem request fields.
     #[serde(flatten)]
     pub base: RedeemRequest,
     /// Redeem options key-value pairs.
@@ -54,6 +57,7 @@ pub struct RedeemGiftCardRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedeemMobileMoneyRequest {
+    /// Base redeem request fields.
     #[serde(flatten)]
     pub base: RedeemRequest,
     /// Redeem options key-value pairs.
@@ -64,9 +68,12 @@ pub struct RedeemMobileMoneyRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedeemResponse {
+    /// Response status.
     pub status: String,
+    /// Optional response message.
     #[serde(default)]
     pub message: Option<String>,
+    /// Optional redemption identifier.
     #[serde(default)]
     pub id: Option<String>,
 }

@@ -4,17 +4,25 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Agent {
+    /// Unique identifier for the agent.
     pub id: String,
+    /// Display name of the agent.
     pub name: String,
+    /// Optional description of the agent's purpose.
     #[serde(default)]
     pub description: Option<String>,
+    /// Agent status (`"active"`, `"inactive"`, etc.).
     pub status: String,
+    /// Optional wallet ID associated with the agent.
     #[serde(default)]
     pub wallet_id: Option<String>,
+    /// Optional agent passport data.
     #[serde(default)]
     pub passport: Option<serde_json::Value>,
+    /// Optional arbitrary metadata.
     #[serde(default)]
     pub meta: Option<serde_json::Value>,
+    /// ISO 8601 timestamp of agent creation.
     #[serde(default)]
     pub created_at: Option<String>,
 }
@@ -79,10 +87,13 @@ pub struct AgentIdRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentApiKeyResponse {
+    /// The agent ID this key belongs to.
     #[serde(default)]
     pub agent_id: Option<String>,
+    /// Visible prefix of the API key for identification.
     #[serde(default)]
     pub api_key_prefix: Option<String>,
+    /// ISO 8601 timestamp of key creation.
     #[serde(default)]
     pub created_at: Option<String>,
 }
@@ -112,7 +123,9 @@ pub struct AgentTransactionsRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentTransactionsResponse {
+    /// Response status (`"success"` or `"error"`).
     pub status: String,
+    /// Transaction list, if available.
     #[serde(default)]
     pub data: Option<Vec<serde_json::Value>>,
 }
@@ -121,7 +134,9 @@ pub struct AgentTransactionsResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentResponse {
+    /// Response status (`"success"` or `"error"`).
     pub status: String,
+    /// The agent data payload.
     #[serde(default)]
     pub data: Option<Agent>,
 }
@@ -130,7 +145,9 @@ pub struct AgentResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentListResponse {
+    /// Response status (`"success"` or `"error"`).
     pub status: String,
+    /// List of agents, if available.
     #[serde(default)]
     pub data: Option<Vec<Agent>>,
 }
@@ -152,7 +169,9 @@ pub struct FundAgentRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentCapabilitiesLimitsResponse {
+    /// Response status (`"success"` or `"error"`).
     pub status: String,
+    /// Configuration data payload.
     #[serde(default)]
     pub data: Option<AgentCapabilitiesLimitsData>,
 }
@@ -161,12 +180,16 @@ pub struct AgentCapabilitiesLimitsResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentCapabilitiesLimitsData {
+    /// Schema or config version identifier.
     #[serde(default)]
     pub version: Option<String>,
+    /// List of enabled capabilities.
     #[serde(default)]
     pub capabilities: Option<Vec<serde_json::Value>>,
+    /// Spending or usage limits.
     #[serde(default)]
     pub limits: Option<serde_json::Value>,
+    /// Allowed geographic regions.
     #[serde(default)]
     pub regions: Option<serde_json::Value>,
 }

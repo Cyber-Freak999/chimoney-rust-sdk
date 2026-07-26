@@ -16,6 +16,7 @@ pub struct PayoutRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of bank transfers.
@@ -45,6 +46,7 @@ pub struct BankTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AirtimePayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of airtime transfers.
@@ -67,6 +69,7 @@ pub struct AirtimeTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChimoneyPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of Chimoney transfers.
@@ -87,6 +90,7 @@ pub struct ChimoneyTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MobileMoneyPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of mobile money transfers.
@@ -111,6 +115,7 @@ pub struct MobileMoneyTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GiftCardPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of gift card transfers.
@@ -133,6 +138,7 @@ pub struct GiftCardTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InterledgerPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of Interledger transfers.
@@ -153,6 +159,7 @@ pub struct InterledgerTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WalletPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// List of wallet transfers.
@@ -175,9 +182,12 @@ pub struct WalletTransfer {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayoutResponse {
+    /// Response status.
     pub status: String,
+    /// Response message.
     #[serde(default)]
     pub message: Option<String>,
+    /// Payout transaction ID.
     #[serde(default)]
     pub id: Option<String>,
 }
@@ -186,9 +196,12 @@ pub struct PayoutResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayoutStatusResponse {
+    /// Response status.
     pub status: String,
+    /// Response message.
     #[serde(default)]
     pub message: Option<String>,
+    /// Payout status data.
     #[serde(default)]
     pub data: Option<serde_json::Value>,
 }
@@ -197,6 +210,7 @@ pub struct PayoutStatusResponse {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InteracPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// Wallet currency to debit from.
@@ -227,6 +241,7 @@ pub struct InteracTransfer {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeiPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// Wallet currency to debit from.
@@ -282,6 +297,7 @@ pub struct ProcessUnpaidRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BillsCaPayoutRequest {
+    /// Base payout fields.
     #[serde(flatten)]
     pub base: PayoutRequest,
     /// Wallet currency to debit from.
