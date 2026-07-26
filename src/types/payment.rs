@@ -19,10 +19,14 @@ pub struct PaymentRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentResponse {
+    /// Unique identifier for the payment.
     pub id: String,
+    /// Current status of the payment.
     pub status: String,
+    /// URL to redirect the user to for checkout.
     #[serde(default)]
     pub checkout_url: Option<String>,
+    /// Optional message providing additional details.
     #[serde(default)]
     pub message: Option<String>,
 }
@@ -31,12 +35,17 @@ pub struct PaymentResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentVerification {
+    /// Unique identifier for the payment.
     pub id: String,
+    /// Current status of the payment.
     pub status: String,
+    /// Payment amount, if available.
     #[serde(default)]
     pub amount: Option<f64>,
+    /// Currency code for the payment amount.
     #[serde(default)]
     pub currency: Option<String>,
+    /// Optional message providing additional details.
     #[serde(default)]
     pub message: Option<String>,
 }
@@ -62,12 +71,16 @@ pub struct SimulateFundingRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SimulatePaymentData {
+    /// URL to the generated payment link.
     #[serde(default)]
     pub payment_link: Option<String>,
+    /// Error message, if the simulation failed.
     #[serde(default)]
     pub error: Option<String>,
+    /// List of payment entries returned by the simulation.
     #[serde(default)]
     pub data: Option<Vec<serde_json::Value>>,
+    /// Any additional fields not covered by the struct.
     #[serde(flatten)]
     pub extra: serde_json::Value,
 }
@@ -76,10 +89,13 @@ pub struct SimulatePaymentData {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SimulateFundingData {
+    /// Whether the funding was successfully simulated.
     #[serde(default)]
     pub simulated: Option<bool>,
+    /// Amount that was simulated, if applicable.
     #[serde(default)]
     pub simulated_amount: Option<f64>,
+    /// Funding rail used in the simulation.
     #[serde(default)]
     pub rail: Option<String>,
 }

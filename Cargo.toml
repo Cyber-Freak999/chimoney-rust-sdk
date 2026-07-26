@@ -1,6 +1,6 @@
 [package]
 name = "chimoney_rust_sdk"
-version = "1.4.0"
+version = "1.4.1"
 edition = "2024"
 rust-version = "1.85"
 description = "Rust SDK for the Chimoney API — bulk global payments, payouts, and financial transactions"

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.1] - 2026-07-26
+
+### Added
+- Comprehensive field-level rustdoc comments across all 12 type modules
+- Documented ~267 public fields in ~94 structs/enums
+- Crate-level documentation with feature summary and usage examples
+- `pub mod` and `pub use` re-exports in `lib.rs` now documented
+
+### Metrics
+- docs.rs coverage: 59% → ~100% (all public items documented)
+
 ## [1.4.0] - 2026-07-26
 
 ### Added

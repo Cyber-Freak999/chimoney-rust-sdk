@@ -259,8 +259,11 @@ pub struct CountryStatesResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankInfo {
+    /// Unique bank identifier.
     pub id: f64,
+    /// Bank code.
     pub code: String,
+    /// Bank name.
     pub name: String,
 }
 
@@ -268,15 +271,21 @@ pub struct BankInfo {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankBranch {
+    /// Unique branch identifier.
     pub id: f64,
+    /// Branch code.
     #[serde(default)]
     pub branch_code: Option<String>,
+    /// Branch name.
     #[serde(default)]
     pub branch_name: Option<String>,
+    /// SWIFT code for the branch.
     #[serde(default)]
     pub swift_code: Option<String>,
+    /// BIC code for the branch.
     #[serde(default)]
     pub bic: Option<String>,
+    /// Parent bank identifier.
     #[serde(default)]
     pub bank_id: Option<f64>,
 }
@@ -285,12 +294,16 @@ pub struct BankBranch {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MobileMoneyCode {
+    /// Mobile money service name.
     #[serde(default)]
     pub name: Option<String>,
+    /// Country where the service operates.
     #[serde(default)]
     pub country: Option<String>,
+    /// Service code.
     #[serde(default)]
     pub code: Option<String>,
+    /// Mobile money provider name.
     #[serde(default)]
     pub provider: Option<String>,
 }
@@ -299,8 +312,10 @@ pub struct MobileMoneyCode {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VerifiedBankAccount {
+    /// Verified account holder name.
     #[serde(default)]
     pub account_name: Option<String>,
+    /// Verified account number.
     #[serde(default)]
     pub account_number: Option<String>,
 }
@@ -309,12 +324,16 @@ pub struct VerifiedBankAccount {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalToUsdData {
+    /// Amount in the origin currency.
     #[serde(default)]
     pub amount_in_origin_currency: Option<String>,
+    /// ISO code of the origin currency.
     #[serde(default)]
     pub origin_currency: Option<String>,
+    /// Equivalent amount in USD.
     #[serde(default)]
     pub amount_in_usd: Option<f64>,
+    /// Timestamp when the conversion rate expires.
     #[serde(default)]
     pub valid_until: Option<String>,
 }
@@ -323,12 +342,16 @@ pub struct LocalToUsdData {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsdToLocalData {
+    /// Amount in USD.
     #[serde(default)]
     pub amount_in_usd: Option<String>,
+    /// ISO code of the destination currency.
     #[serde(default)]
     pub destination_currency: Option<String>,
+    /// Equivalent amount in the destination currency.
     #[serde(default)]
     pub amount_in_destination_currency: Option<f64>,
+    /// Timestamp when the conversion rate expires.
     #[serde(default)]
     pub valid_until: Option<String>,
 }
