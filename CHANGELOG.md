@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0] - 2026-07-26
+
+### Added
+- Serde tests for 17 response/request wrapper types (148 total tests)
+- 6 domain-specific examples: account, payment, payout, agent, wallet, multicurrency
+
+### Changed
+- Improved test coverage from 136 to 148 tests
+
 ## [1.2.0] - 2026-07-26
 
 ### Added

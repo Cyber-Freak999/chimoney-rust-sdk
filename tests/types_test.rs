@@ -2133,3 +2133,468 @@ fn test_simulate_funding_request_spei_serialization() {
     assert!(json.contains("500"));
     assert!(json.contains("646180110400000007"));
 }
+
+// ── AccountOperationResponse Tests ──────────────────────────────────
+
+#[test]
+fn test_account_operation_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Operation completed",
+        "data": {"id": "txn_123"}
+    }"#;
+    let resp: AccountOperationResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.message, Some("Operation completed".to_string()));
+    assert!(resp.data.is_some());
+}
+
+#[test]
+fn test_account_operation_response_minimal() {
+    let json = r#"{"status": "ok"}"#;
+    let resp: AccountOperationResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "ok");
+    assert_eq!(resp.message, None);
+    assert_eq!(resp.data, None);
+}
+
+// ── InteracPayoutRequest Tests ──────────────────────────────────────
+
+#[test]
+fn test_interac_payout_request_serialization() {
+    let request = InteracPayoutRequest {
+        base: PayoutRequest {
+            sub_account: None,
+            turn_off_notification: None,
+        },
+        debit_currency: "CAD".to_string(),
+        interacs: vec![InteracTransfer {
+            email: "test@example.com".to_string(),
+            name: "John Doe".to_string(),
+            amount: 100.0,
+            narration: Some("Test payment".to_string()),
+            collection_payment_issue_id: None,
+        }],
+    };
+    let json = serde_json::to_string(&request).unwrap();
+    assert!(json.contains("debitCurrency"));
+    assert!(json.contains("CAD"));
+    assert!(json.contains("interacs"));
+    assert!(json.contains("test@example.com"));
+    assert!(json.contains("John Doe"));
+    assert!(json.contains("100"));
+}
+
+// ── SpeiPayoutRequest Tests ─────────────────────────────────────────
+
+#[test]
+fn test_spei_payout_request_serialization() {
+    let request = SpeiPayoutRequest {
+        base: PayoutRequest {
+            sub_account: None,
+            turn_off_notification: None,
+        },
+        debit_currency: Some("MXN".to_string()),
+        speis: vec![SpeiTransfer {
+            clabe: Some("646180110400000007".to_string()),
+            phone_num: None,
+            debit_card: None,
+            beneficiary: "Jane Doe".to_string(),
+            amount: 5000.0,
+            institution_code: None,
+            narration: None,
+            collection_payment_issue_id: None,
+        }],
+    };
+    let json = serde_json::to_string(&request).unwrap();
+    assert!(json.contains("debitCurrency"));
+    assert!(json.contains("MXN"));
+    assert!(json.contains("speis"));
+    assert!(json.contains("646180110400000007"));
+    assert!(json.contains("Jane Doe"));
+    assert!(json.contains("5000"));
+}
+
+// ── BillsCaPayoutRequest Tests ──────────────────────────────────────
+
+#[test]
+fn test_bills_ca_payout_request_serialization() {
+    let request = BillsCaPayoutRequest {
+        base: PayoutRequest {
+            sub_account: None,
+            turn_off_notification: None,
+        },
+        debit_currency: Some("CAD".to_string()),
+        billing_data: vec![BillingData {
+            email: "bill@example.com".to_string(),
+            firstname: "Jane".to_string(),
+            lastname: "Doe".to_string(),
+            payee_code: "PAY001".to_string(),
+            payee_name: "Utility Co".to_string(),
+            amount: 250.0,
+            account_id: "ACC123".to_string(),
+            narration: Some("Electric bill".to_string()),
+            collection_payment_issue_id: None,
+        }],
+    };
+    let json = serde_json::to_string(&request).unwrap();
+    assert!(json.contains("debitCurrency"));
+    assert!(json.contains("billingData"));
+    assert!(json.contains("bill@example.com"));
+    assert!(json.contains("Jane"));
+    assert!(json.contains("PAY001"));
+    assert!(json.contains("ACC123"));
+    assert!(json.contains("250"));
+}
+
+// ── UpdateCommunityRequest Tests ────────────────────────────────────
+
+#[test]
+fn test_update_community_request_serialization() {
+    let request = UpdateCommunityRequest {
+        id: "user_123".to_string(),
+        community_id: 456,
+        membership_id: Some("mem_789".to_string()),
+        member_name: Some("John Doe".to_string()),
+    };
+    let json = serde_json::to_string(&request).unwrap();
+    assert!(json.contains("id"));
+    assert!(json.contains("user_123"));
+    assert!(json.contains("communityID"));
+    assert!(json.contains("456"));
+    assert!(json.contains("membershipId"));
+    assert!(json.contains("mem_789"));
+    assert!(json.contains("memberName"));
+}
+
+// ── CommunityResponse Tests ─────────────────────────────────────────
+
+#[test]
+fn test_community_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Community created",
+        "data": {"communityId": 456}
+    }"#;
+    let resp: CommunityResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.message, Some("Community created".to_string()));
+    assert!(resp.data.is_some());
+}
+
+#[test]
+fn test_community_response_minimal() {
+    let json = r#"{"status": "ok"}"#;
+    let resp: CommunityResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "ok");
+    assert_eq!(resp.message, None);
+    assert_eq!(resp.data, None);
+}
+
+// ── CommunityMembersResponse Tests ──────────────────────────────────
+
+#[test]
+fn test_community_members_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Members fetched",
+        "data": [
+            {"uid": "u1", "name": "Alice", "email": "alice@example.com"},
+            {"uid": "u2", "name": "Bob", "email": "bob@example.com"}
+        ]
+    }"#;
+    let resp: CommunityMembersResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(data.len(), 2);
+    assert_eq!(data[0].uid, Some("u1".to_string()));
+    assert_eq!(data[0].name, Some("Alice".to_string()));
+    assert_eq!(data[1].name, Some("Bob".to_string()));
+}
+
+// ── KycLinkResponse Tests ──────────────────────────────────────────
+
+#[test]
+fn test_kyc_link_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "KYC link generated",
+        "data": {
+            "kycUrl": "https://kyc.example.com/link",
+            "subAccountID": "sub_123",
+            "redirectUrl": "https://example.com/done"
+        }
+    }"#;
+    let resp: KycLinkResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(data.kyc_url, "https://kyc.example.com/link");
+    assert_eq!(data.sub_account_id, "sub_123");
+    assert_eq!(
+        data.redirect_url,
+        Some("https://example.com/done".to_string())
+    );
+}
+
+#[test]
+fn test_kyc_link_response_minimal() {
+    let json = r#"{
+        "status": "success",
+        "data": {
+            "kycUrl": "https://kyc.example.com/link",
+            "subAccountID": "sub_123"
+        }
+    }"#;
+    let resp: KycLinkResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(data.redirect_url, None);
+}
+
+// ── BankSearchResponse Tests ────────────────────────────────────────
+
+#[test]
+fn test_bank_search_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Banks found",
+        "data": [
+            {
+                "primaryKey": "BK001",
+                "institutionName": "First Bank",
+                "address1": "123 Main St",
+                "city": "Lagos",
+                "region": "Lagos",
+                "country": "Nigeria",
+                "countryISO": "NG",
+                "postalCode": "100001"
+            }
+        ],
+        "pagination": {"total": 1, "skip": 0, "take": 10}
+    }"#;
+    let resp: BankSearchResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.message, "Banks found");
+    assert_eq!(resp.data.len(), 1);
+    assert_eq!(resp.data[0].primary_key, "BK001");
+    assert_eq!(resp.data[0].institution_name, "First Bank");
+    assert_eq!(resp.data[0].country_iso, "NG");
+    let pag = resp.pagination.unwrap();
+    assert_eq!(pag.total, 1);
+    assert_eq!(pag.skip, 0);
+    assert_eq!(pag.take, 10);
+}
+
+// ── BeneficiaryRulesResponse Tests ──────────────────────────────────
+
+#[test]
+fn test_beneficiary_rules_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Rules fetched",
+        "data": [
+            {
+                "name": "account_number",
+                "label": "Account Number",
+                "required": true,
+                "regexPattern": "^[0-9]{10}$"
+            }
+        ]
+    }"#;
+    let resp: BeneficiaryRulesResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.message, "Rules fetched");
+    assert_eq!(resp.data.len(), 1);
+    assert_eq!(resp.data[0].name, "account_number");
+    assert_eq!(resp.data[0].label, "Account Number");
+    assert!(resp.data[0].required);
+    assert_eq!(resp.data[0].regex_pattern, Some("^[0-9]{10}$".to_string()));
+}
+
+// ── IdentificationTypesResponse Tests ──────────────────────────────
+
+#[test]
+fn test_identification_types_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Types fetched",
+        "data": [
+            {"type": "passport", "code": "PP"},
+            {"type": "drivers_license", "code": "DL"}
+        ]
+    }"#;
+    let resp: IdentificationTypesResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.data.len(), 2);
+    assert_eq!(resp.data[0].r#type, "passport");
+    assert_eq!(resp.data[0].code, "PP");
+    assert_eq!(resp.data[1].r#type, "drivers_license");
+}
+
+// ── FeeEstimateResponse Tests ───────────────────────────────────────
+
+#[test]
+fn test_fee_estimate_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Fee estimated",
+        "data": {
+            "amount": 100.0,
+            "currency": "USD",
+            "rail": "interac",
+            "direction": "outbound",
+            "platformFee": 1.5,
+            "railFee": 0.5,
+            "totalFee": 2.0,
+            "netAmount": 98.0
+        }
+    }"#;
+    let resp: FeeEstimateResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data;
+    assert_eq!(data.amount, 100.0);
+    assert_eq!(data.currency, "USD");
+    assert_eq!(data.platform_fee, 1.5);
+    assert_eq!(data.rail_fee, 0.5);
+    assert_eq!(data.total_fee, 2.0);
+    assert_eq!(data.net_amount, 98.0);
+}
+
+// ── ValidateVoucherResponse Tests ───────────────────────────────────
+
+#[test]
+fn test_validate_voucher_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Voucher valid",
+        "data": {
+            "Code": "ABC123",
+            "Created Date": "2024-01-01",
+            "Expiry Date": "2024-12-31"
+        }
+    }"#;
+    let resp: ValidateVoucherResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.data.code, "ABC123");
+    assert_eq!(resp.data.created_date, Some("2024-01-01".to_string()));
+    assert_eq!(resp.data.expiry_date, Some("2024-12-31".to_string()));
+}
+
+// ── CountryStatesResponse Tests ─────────────────────────────────────
+
+#[test]
+fn test_country_states_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "States fetched",
+        "data": [
+            {"code": "LA", "name": "Lagos"},
+            {"code": "AB", "name": "Abuja"}
+        ]
+    }"#;
+    let resp: CountryStatesResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    assert_eq!(resp.data.len(), 2);
+    assert_eq!(resp.data[0].code, "LA");
+    assert_eq!(resp.data[0].name, "Lagos");
+    assert_eq!(resp.data[1].code, "AB");
+}
+
+// ── AgentCapabilitiesLimitsResponse Tests ───────────────────────────
+
+#[test]
+fn test_agent_capabilities_limits_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "data": {
+            "version": "1.0.0",
+            "capabilities": ["chat", "tools"],
+            "limits": {"maxTokens": 4096},
+            "regions": {"us": true}
+        }
+    }"#;
+    let resp: AgentCapabilitiesLimitsResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(data.version, Some("1.0.0".to_string()));
+    assert!(data.capabilities.is_some());
+    assert!(data.limits.is_some());
+}
+
+#[test]
+fn test_agent_capabilities_limits_response_minimal() {
+    let json = r#"{"status": "ok"}"#;
+    let resp: AgentCapabilitiesLimitsResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "ok");
+    assert!(resp.data.is_none());
+}
+
+// ── PassportResponse Tests ──────────────────────────────────────────
+
+#[test]
+fn test_passport_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "data": {
+            "passportStatus": "claimed",
+            "aportPassportId": "pp_123",
+            "claimed": true
+        }
+    }"#;
+    let resp: PassportResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(data.passport_status, Some(PassportStatus::Claimed));
+    assert_eq!(data.aport_passport_id, Some("pp_123".to_string()));
+    assert_eq!(data.claimed, Some(true));
+}
+
+#[test]
+fn test_passport_response_unclaimed() {
+    let json = r#"{
+        "status": "success",
+        "data": {"passportStatus": "unclaimed"}
+    }"#;
+    let resp: PassportResponse = serde_json::from_str(json).unwrap();
+    let data = resp.data.unwrap();
+    assert_eq!(data.passport_status, Some(PassportStatus::Unclaimed));
+}
+
+// ── GenerateInvoiceResponse Tests ───────────────────────────────────
+
+#[test]
+fn test_generate_invoice_response_deserialization() {
+    let json = r#"{
+        "status": "success",
+        "message": "Invoice generated",
+        "data": {
+            "downloadURL": "https://example.com/invoice.pdf",
+            "chimoneyPaymentRequestCreateURL": "https://pay.chimoney.io/create",
+            "chimoneyAPIEndpoint": "https://api.chimoney.io/v0"
+        }
+    }"#;
+    let resp: GenerateInvoiceResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "success");
+    let data = resp.data.unwrap();
+    assert_eq!(
+        data.download_url,
+        Some("https://example.com/invoice.pdf".to_string())
+    );
+    assert_eq!(
+        data.chimoney_payment_request_create_url,
+        Some("https://pay.chimoney.io/create".to_string())
+    );
+    assert_eq!(
+        data.chimoney_api_endpoint,
+        Some("https://api.chimoney.io/v0".to_string())
+    );
+}
+
+#[test]
+fn test_generate_invoice_response_minimal() {
+    let json = r#"{"status": "ok"}"#;
+    let resp: GenerateInvoiceResponse = serde_json::from_str(json).unwrap();
+    assert_eq!(resp.status, "ok");
+    assert_eq!(resp.message, None);
+    assert!(resp.data.is_none());
+}
